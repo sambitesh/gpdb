@@ -3599,4 +3599,3 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 	
 	return node;
 }
-

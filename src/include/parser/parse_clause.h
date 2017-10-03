@@ -52,4 +52,3 @@ extern Index assignSortGroupRef(TargetEntry *tle, List *tlist);
 extern bool targetIsInSortList(TargetEntry *tle, Oid sortop, List *sortList);
 
 #endif   /* PARSE_CLAUSE_H */
-

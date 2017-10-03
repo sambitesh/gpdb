@@ -1917,4 +1917,3 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
 	
 	return new_tlist;
 }
-

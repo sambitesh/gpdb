@@ -573,4 +573,3 @@ CopyPlannerConfig(const PlannerConfig *c1)
 	memcpy(c2, c1, sizeof(PlannerConfig));
 	return c2;
 }
-

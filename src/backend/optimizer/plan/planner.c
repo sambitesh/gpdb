@@ -4561,4 +4561,3 @@ isSimplyUpdatableQuery(Query *query)
 	}
 	return false;
 }
-

@@ -3288,4 +3288,3 @@ setQryDistributionPolicy(SelectStmt *stmt, Query *qry)
 		}
 	}
 }
-

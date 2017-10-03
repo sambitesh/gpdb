@@ -422,6 +422,7 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 			{
 				SortGroupClause *gc = makeNode(SortGroupClause);
 
+				gc->eqop = eqOp;
 				gc->sortop = sortOp;
 				gc->eqop = eqOp;
 				gc->tleSortGroupRef = list_length(context->groupClause) + 1;
