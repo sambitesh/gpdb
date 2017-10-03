@@ -74,7 +74,7 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
 #define ACL_TRIGGER		(1<<6)
 #define ACL_EXECUTE		(1<<7)	/* for functions */
 #define ACL_USAGE		(1<<8)	/* for languages, namespaces
-								 * and external protocols */
+* and external protocols */
 #define ACL_CREATE		(1<<9)	/* for namespaces and databases */
 #define ACL_CREATE_TEMP (1<<10) /* for databases */
 #define ACL_CONNECT		(1<<11) /* for databases */
@@ -104,37 +104,37 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
 typedef struct Query
 {
 	NodeTag		type;
-
+	
 	CmdType		commandType;	/* select|insert|update|delete|utility */
-
+	
 	QuerySource querySource;	/* where did I come from? */
-
+	
 	bool		canSetTag;		/* do I set the command result tag? */
-
+	
 	Node	   *utilityStmt;	/* non-null if this is DECLARE CURSOR or a
 								 * non-optimizable statement */
-
+	
 	int			resultRelation; /* rtable index of target relation for
 								 * INSERT/UPDATE/DELETE; 0 for SELECT */
-
+	
 	IntoClause *intoClause;		/* target for SELECT INTO / CREATE TABLE AS */
-
+	
 	bool		hasAggs;		/* has aggregates in tlist or havingQual */
 	bool		hasWindowFuncs; /* has window functions in tlist */
 	bool		hasSubLinks;	/* has subquery SubLink */
+	bool		hasDistinctOn;	/* distinctClause is from DISTINCT ON */
 	bool        hasDynamicFunctions; /* has functions with unstable return types */
 	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON MASTER or ALL SEGMENTS */
-	bool		hasDistinctOn;	/* distinctClause is from DISTINCT ON */
-
+	
 	List	   *rtable;			/* list of range table entries */
 	FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
-
+	
 	List	   *targetList;		/* target list (of TargetEntry) */
-
+	
 	List	   *returningList;	/* return-values list (of TargetEntry) */
-
+	
 	/*
-	 * A list of GroupClauses or GroupingClauses.  The order of GroupClauses
+	 * A list of SortGroupClauses or GroupingClauses.  The order of SortGroupClauses
 	 * or GroupingClauses are based on input queries. However, in each
 	 * grouping set, all GroupClauses will appear in front of GroupingClauses.
 	 * See the following GROUP BY clause:
@@ -143,36 +143,36 @@ typedef struct Query
 	 *
 	 * the result list can be roughly represented as follows.
 	 *
-	 * GroupClause(a) --> GroupingClause( ROLLUP, groupsets (GroupClause(b)
-	 * --> GroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
-	 * (GroupClause(e) --> GroupClause(d) ) )
+	 * SortGroupClause(a) --> GroupingClause( ROLLUP, groupsets (SortGroupClause(b)
+	 * --> SortGroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
+	 * (SortGroupClause(e) --> SortGroupClause(d) ) )
 	 */
 	List	   *groupClause;	/* a list of SortGroupClause's */
-
+	
 	Node	   *havingQual;		/* qualifications applied to groups */
-
+	
 	List	   *windowClause;	/* defined window specifications */
-
+	
 	List	   *distinctClause; /* a list of SortGroupClause's */
-
+	
 	List	   *sortClause;		/* a list of SortGroupClause's */
-
+	
 	List	   *scatterClause;	/* a list of tle's */
 	bool		isTableValueSelect; /* GPDB: Is this a TABLE (...) subquery argument? */
-
+	
 	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
 	bool		hasRecursive;	/* Whether this query has a recursive WITH
 								 * clause */
-
-
+	
+	
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
-
+	
 	List	   *rowMarks;		/* a list of RowMarkClause's */
-
+	
 	Node	   *setOperations;	/* set-operation tree if this is top level of
 								 * a UNION/INTERSECT/EXCEPT query */
-
+	
 	/*
 	 * MPP: Used only on QD. Don't serialize. Holds the result distribution
 	 * policy for SELECT ... INTO and set operations.
@@ -302,6 +302,8 @@ typedef struct TypeCast
 /*
  * FuncCall - a function or aggregate invocation
  *
+ * agg_order (if not NIL) indicates we saw 'foo(... ORDER BY ...)', or if
+ * agg_within_group is true, it was 'foo(...) WITHIN GROUP (ORDER BY ...)'.
  * agg_star indicates we saw a 'foo(*)' construct, while agg_distinct
  * indicates we saw 'foo(DISTINCT ...)'.  In either case, the construct
  * *must* be an aggregate call.  Otherwise, it might be either an
@@ -315,6 +317,7 @@ typedef struct FuncCall
 	List	   *args;			/* the arguments (list of exprs) */
 	List	   *agg_order;		/* ORDER BY (list of SortBy) */
 	Node	   *agg_filter;		/* FILTER clause, if any */
+	bool		agg_within_group;		/* ORDER BY appeared in WITHIN GROUP */
 	bool		agg_star;		/* argument was really '*' */
 	bool		agg_distinct;	/* arguments were labeled DISTINCT */
 	bool		func_variadic;	/* last argument was labeled VARIADIC */
@@ -449,13 +452,13 @@ typedef struct WindowDef
 #define FRAMEOPTION_END_VALUE_FOLLOWING			0x02000 /* end is V. F. */
 
 #define FRAMEOPTION_START_VALUE \
-	(FRAMEOPTION_START_VALUE_PRECEDING | FRAMEOPTION_START_VALUE_FOLLOWING)
+(FRAMEOPTION_START_VALUE_PRECEDING | FRAMEOPTION_START_VALUE_FOLLOWING)
 #define FRAMEOPTION_END_VALUE \
-	(FRAMEOPTION_END_VALUE_PRECEDING | FRAMEOPTION_END_VALUE_FOLLOWING)
+(FRAMEOPTION_END_VALUE_PRECEDING | FRAMEOPTION_END_VALUE_FOLLOWING)
 
 #define FRAMEOPTION_DEFAULTS \
-	(FRAMEOPTION_RANGE | FRAMEOPTION_START_UNBOUNDED_PRECEDING | \
-	 FRAMEOPTION_END_CURRENT_ROW)
+(FRAMEOPTION_RANGE | FRAMEOPTION_START_UNBOUNDED_PRECEDING | \
+FRAMEOPTION_END_CURRENT_ROW)
 
 /*
  * RangeSubselect - subquery appearing in a FROM clause
@@ -690,32 +693,32 @@ typedef enum RTEKind
 typedef struct RangeTblEntry
 {
 	NodeTag		type;
-
+	
 	RTEKind		rtekind;		/* see above */
-
+	
 	/*
 	 * XXX the fields applicable to only some rte kinds should be merged into
 	 * a union.  I didn't do this yet because the diffs would impact a lot of
 	 * code that is being actively worked on.  FIXME someday.
 	 */
-
+	
 	/*
 	 * Fields valid for a plain relation RTE (else zero):
 	 */
 	Oid			relid;			/* OID of the relation */
-
+	
 	/*
 	 * Fields valid for a subquery RTE (else NULL):
 	 */
 	Query	   *subquery;		/* the sub-query */
-
+	
 	/* These are for pre-planned sub-queries only.  They are internal to
 	 * window planning.
 	 */
 	struct Plan *subquery_plan;
 	List		*subquery_rtable;
 	List		*subquery_pathkeys;
-
+	
 	/*
 	 * Fields valid for a join RTE (else NULL/zero):
 	 *
@@ -729,7 +732,7 @@ typedef struct RangeTblEntry
 	 */
 	JoinType	jointype;		/* type of join */
 	List	   *joinaliasvars;	/* list of alias-var expansions */
-
+	
 	/*
 	 * Fields valid for a function RTE (else NULL):
 	 *
@@ -741,12 +744,12 @@ typedef struct RangeTblEntry
 	List	   *funccoltypes;	/* OID list of column type OIDs */
 	List	   *funccoltypmods; /* integer list of column typmods */
 	bytea	   *funcuserdata;	/* describe function user data. assume bytea */
-
+	
 	/*
 	 * Fields valid for a values RTE (else NIL):
 	 */
 	List	   *values_lists;	/* list of expression lists */
-
+	
 	/*
 	 * Fields valid for a CTE RTE (else NULL/zero):
 	 */
@@ -755,12 +758,12 @@ typedef struct RangeTblEntry
 	bool		self_reference;	/* is this a recursive self-reference? */
 	List	   *ctecoltypes;	/* OID list of column type OIDs */
 	List	   *ctecoltypmods;	/* integer list of column typmods */
-
+	
 	/* GPDB: Valid for base-relations, true if GP_DIST_RANDOM
 	 * pseudo-function was specified as modifier in FROM-clause
 	 */
 	bool		forceDistRandom;
-
+	
 	/*
 	 * Fields valid in all RTEs:
 	 */
@@ -770,14 +773,14 @@ typedef struct RangeTblEntry
 	bool		inFromCl;		/* present in FROM clause? */
 	AclMode		requiredPerms;	/* bitmask of required access permissions */
 	Oid			checkAsUser;	/* if valid, check access as this role */
-
-    List       *pseudocols;     /* CDB: List of CdbRelColumnInfo nodes defining
-                                 *  pseudo columns for targetlist of scan node.
-                                 *  Referenced by Var nodes with varattno =
-                                 *  FirstLowInvalidHeapAttributeNumber minus
-                                 *  the 0-based position in the list.  Used
-                                 *  only in planner & EXPLAIN, not in executor.
-                                 */
+	
+	List       *pseudocols;     /* CDB: List of CdbRelColumnInfo nodes defining
+								 *  pseudo columns for targetlist of scan node.
+								 *  Referenced by Var nodes with varattno =
+								 *  FirstLowInvalidHeapAttributeNumber minus
+								 *  the 0-based position in the list.  Used
+								 *  only in planner & EXPLAIN, not in executor.
+								 */
 } RangeTblEntry;
 
 /*
@@ -959,10 +962,10 @@ typedef struct CommonTableExpr
 } CommonTableExpr;
 
 #define GetCTETargetList(cte) \
-	(AssertMacro((cte)->ctequery != NULL && IsA((cte)->ctequery, Query)), \
-	 ((Query *) (cte)->ctequery)->commandType == CMD_SELECT ? \
-	 ((Query *) (cte)->ctequery)->targetList : \
-	 ((Query *) (cte)->ctequery)->returningList)
+(AssertMacro((cte)->ctequery != NULL && IsA((cte)->ctequery, Query)), \
+((Query *) (cte)->ctequery)->commandType == CMD_SELECT ? \
+((Query *) (cte)->ctequery)->targetList : \
+((Query *) (cte)->ctequery)->returningList)
 
 /*****************************************************************************
  *		Optimizable Statements
@@ -1036,7 +1039,7 @@ typedef enum SetOperation
 typedef struct SelectStmt
 {
 	NodeTag		type;
-
+	
 	/*
 	 * These fields are used only in "leaf" SelectStmts.
 	 */
@@ -1051,7 +1054,7 @@ typedef struct SelectStmt
 	List	   *windowClause;	/* window specification clauses */
 	List       *scatterClause;	/* GPDB: TableValueExpr data distribution */
 	WithClause *withClause; 	/* WITH clause */
-
+	
 	/*
 	 * In a "leaf" node representing a VALUES list, the above fields are all
 	 * null, and instead this field is set.  Note that the elements of the
@@ -1061,7 +1064,7 @@ typedef struct SelectStmt
 	 * analysis to reject that where not valid.
 	 */
 	List	   *valuesLists;	/* untransformed list of expression lists */
-
+	
 	/*
 	 * These fields are used in both "leaf" SelectStmts and upper-level
 	 * SelectStmts.
@@ -1070,7 +1073,7 @@ typedef struct SelectStmt
 	Node	   *limitOffset;	/* # of result tuples to skip */
 	Node	   *limitCount;		/* # of result tuples to return */
 	List	   *lockingClause;	/* FOR UPDATE (list of LockingClause's) */
-
+	
 	/*
 	 * These fields are used only in upper-level SelectStmts.
 	 */
@@ -1079,10 +1082,10 @@ typedef struct SelectStmt
 	struct SelectStmt *larg;	/* left child */
 	struct SelectStmt *rarg;	/* right child */
 	/* Eventually add fields for CORRESPONDING spec here */
-
+	
 	/* This field used by: SELECT INTO, CTAS */
 	List       *distributedBy;  /* GPDB: columns to distribute the data on. */
-
+	
 } SelectStmt;
 
 
@@ -1109,7 +1112,7 @@ typedef struct SetOperationStmt
 	Node	   *larg;			/* left child */
 	Node	   *rarg;			/* right child */
 	/* Eventually add fields for CORRESPONDING spec here */
-
+	
 	/* Fields derived during parse analysis: */
 	List	   *colTypes;		/* OID list of output column type OIDs */
 	List	   *colTypmods;		/* integer list of output column typmods */
@@ -1185,7 +1188,7 @@ typedef struct CreateSchemaStmt
 	char	   *schemaname;		/* the name of the schema to create */
 	char	   *authid;			/* the owner of the created schema */
 	List	   *schemaElts;		/* schema components (list of parsenodes) */
-
+	
 	/*
 	 * In GPDB, when a CreateSchemaStmt is dispatched to executor nodes, the
 	 * following field is set.
@@ -1626,10 +1629,10 @@ typedef struct CreateExternalStmt
 	Node	   *sreh;			/* Single row error handling info */
 	List       *extOptions;		/* generic options to external table */
 	List	   *encoding;		/* List (size 1 max) of DefElem nodes for
-								   data encoding */
+								 data encoding */
 	List       *distributedBy;   /* what columns we distribute the data by */
 	struct GpPolicy  *policy;	/* used for writable tables */
-
+	
 } CreateExternalStmt;
 
 /* ----------------------
@@ -1643,7 +1646,7 @@ typedef struct CreateForeignStmt
 	List	   *tableElts;		/* column definitions (list of ColumnDef) */
 	char	   *srvname;		/* server name */
 	List	   *options;		/* generic options to foreign table */
-
+	
 } CreateForeignStmt;
 
 /* ----------
@@ -1754,7 +1757,7 @@ typedef enum PartitionByVerbosity		/* control Partition messaging */
 	PART_VERBO_NORMAL, 		/* normal (all messages) */
 	PART_VERBO_NODISTRO, 	/* NO DISTRIBution policy messages */
 	PART_VERBO_NOPARTNAME   /* NO distro or partition name messages
-							   (for SET SUBPARTITION TEMPLATE) */
+							 (for SET SUBPARTITION TEMPLATE) */
 } PartitionByVerbosity;
 
 typedef struct PartitionBy			/* the Partition By clause */
@@ -1907,7 +1910,7 @@ typedef struct CreateTrigStmt
 	bool		before;			/* BEFORE/AFTER */
 	bool		row;			/* ROW/STATEMENT */
 	char		actions[4];		/* 1 to 3 of 'i', 'u', 'd', + trailing \0 */
-
+	
 	/* The following are used for referential */
 	/* integrity constraint triggers */
 	bool		isconstraint;	/* This is an RI trigger */
@@ -2079,7 +2082,6 @@ typedef struct DefineStmt
 	List	   *defnames;		/* qualified name (list of Value strings) */
 	List	   *args;			/* a list of TypeName (if needed) */
 	List	   *definition;		/* a list of DefElem */
-	bool        ordered;        /* signals ordered aggregates */
 	bool		trusted;		/* used only for PROTOCOL as this point */
 } DefineStmt;
 
@@ -2647,15 +2649,15 @@ typedef struct VacuumStmt
 	int			freeze_min_age; /* min freeze age, or -1 to use default */
 	RangeVar   *relation;		/* single table to process, or NULL */
 	List	   *va_cols;		/* list of column names, or NIL for all */
-
+	
 	/* Object IDs for relations which expand from partition definitions */
 	List	   *expanded_relids;
-
+	
 	/*
 	 * AO segment file num to compact (integer).
 	 */
 	List *appendonly_compaction_segno;
-
+	
 	/*
 	 * AO table meta data from the dispatcher.
 	 * Used during compaction.
@@ -2666,7 +2668,7 @@ typedef struct VacuumStmt
 	 * transaction. If the list has no entries, it is a drop transaction.
 	 */
 	List *appendonly_compaction_insert_segno;
-
+	
 	/*
 	 * Iff true, the vacuum run is the cleanup phase of an append-only compaction.
 	 * In the cleanup phase, the following operations are performed
@@ -2674,21 +2676,21 @@ typedef struct VacuumStmt
 	 * - Update of pg_class statistics of append-only relation
 	 */
 	bool appendonly_compaction_vacuum_cleanup;
-
+	
 	/*
 	 * Iff true, the vacuum runs the prepare phase of an append-only compaction.
 	 * In the prepare phase, the following operations are performed
 	 * - Vacuum of indexes on append-only relation based on visimap.
 	 */
 	bool appendonly_compaction_vacuum_prepare;
-
+	
 	/*
 	 * MPP-24168: If the appendonly table is empty, we should vacuum
 	 * auxiliary tables in prepare phase itself.  Othewise, age of
 	 * auxiliary heap relations never gets updated.
 	 */
 	bool appendonly_relation_empty;
-
+	
 	bool heap_truncate;			/* true in the 2nd pass for heap vacuum full */
 } VacuumStmt;
 
@@ -2887,7 +2889,7 @@ typedef struct AlterTSConfigurationStmt
 {
 	NodeTag		type;
 	List	   *cfgname;		/* qualified name (list of Value strings) */
-
+	
 	/*
 	 * dicts will be non-NIL if ADD/ALTER MAPPING was specified. If dicts is
 	 * NIL, but tokentype isn't, DROP MAPPING was specified.
@@ -2900,3 +2902,4 @@ typedef struct AlterTSConfigurationStmt
 } AlterTSConfigurationStmt;
 
 #endif   /* PARSENODES_H */
+
