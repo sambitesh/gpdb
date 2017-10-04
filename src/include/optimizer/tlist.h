@@ -29,7 +29,7 @@ extern List *tlist_members(Node *node, List *targetlist);
 extern TargetEntry *tlist_member_ignoring_RelabelType(Expr *expr, List *targetlist);
 
 extern List *flatten_tlist(List *tlist, PVCAggregateBehavior aggbehavior,
-						   PVCPlaceHolderBehavior phbehavior);
+			  PVCPlaceHolderBehavior phbehavior);
 extern List *add_to_flat_tlist_junk(List *tlist, List *exprs, bool resjunk);
 extern List *add_to_flat_tlist(List *tlist, List *exprs);
 
@@ -37,13 +37,13 @@ extern List *get_tlist_exprs(List *tlist, bool includeJunk);
 extern bool tlist_same_datatypes(List *tlist, List *colTypes, bool junkOK);
 
 extern TargetEntry *get_sortgroupref_tle(Index sortref,
-										 List *targetList);
+					 List *targetList);
 extern TargetEntry *get_sortgroupclause_tle(SortGroupClause *sgClause,
-											List *targetList);
+						List *targetList);
 extern Node *get_sortgroupclause_expr(SortGroupClause *sgClause,
-									  List *targetList);
+						 List *targetList);
 extern List *get_sortgrouplist_exprs(List *sgClauses,
-									 List *targetList);
+						List *targetList);
 
 extern Oid *extract_grouping_ops(List *groupClause);
 extern AttrNumber *extract_grouping_cols(List *groupClause, List *tlist);
@@ -69,4 +69,3 @@ extern Index maxSortGroupRef(List *targetlist, bool include_orderedagg);
 extern int get_row_width(List *tlist);
 
 #endif   /* TLIST_H */
-

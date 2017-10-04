@@ -102,12 +102,12 @@ query_planner(PlannerInfo *root, List *tlist,
 	Index		rti;
 	ListCell   *lc;
 	double		total_pages;
-	
+
 	/* Make tuple_fraction accessible to lower-level routines */
 	root->tuple_fraction = tuple_fraction;
-	
+
 	*num_groups = 1;			/* default result */
-	
+
 	/*
 	 * If the query has an empty join tree, then it's something easy like
 	 * "SELECT 2+2;" or "INSERT ... VALUES()".	Fall through quickly.
@@ -116,9 +116,9 @@ query_planner(PlannerInfo *root, List *tlist,
 	{
 		/* We need a trivial path result */
 		*cheapest_path = (Path *)
-		create_result_path((List *) parse->jointree->quals);
+			create_result_path((List *) parse->jointree->quals);
 		*sorted_path = NULL;
-		
+
 		/*
 		 * We still are required to canonicalize any pathkeys, in case it's
 		 * something like "SELECT 2+2 ORDER BY 1".
@@ -129,17 +129,17 @@ query_planner(PlannerInfo *root, List *tlist,
 		root->group_pathkeys = canonicalize_pathkeys(root,
 													 root->group_pathkeys);
 		root->distinct_pathkeys = canonicalize_pathkeys(root,
-														root->distinct_pathkeys);
+													root->distinct_pathkeys);
 		root->window_pathkeys = canonicalize_pathkeys(root,
 													  root->window_pathkeys);
 		root->sort_pathkeys = canonicalize_pathkeys(root,
 													root->sort_pathkeys);
-		
+
 		{
 			char		exec_location;
-			
+
 			exec_location = check_execute_on_functions((Node *) parse->targetList);
-			
+
 			if (exec_location == PROEXECLOCATION_MASTER)
 				CdbPathLocus_MakeEntry(&(*cheapest_path)->locus);
 			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
@@ -147,7 +147,7 @@ query_planner(PlannerInfo *root, List *tlist,
 		}
 		return;
 	}
-	
+
 	/*
 	 * Init planner lists to empty, and set up the array to hold RelOptInfos
 	 * for "simple" rels.
@@ -157,7 +157,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	 */
 	root->simple_rel_array_size = list_length(parse->rtable) + 1;
 	root->simple_rel_array = (RelOptInfo **)
-	palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
+		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
 	root->join_rel_list = NIL;
 	root->join_rel_hash = NULL;
 	root->canon_pathkeys = NIL;
@@ -167,21 +167,21 @@ query_planner(PlannerInfo *root, List *tlist,
 	root->join_info_list = NIL;
 	root->placeholder_list = NIL;
 	root->initial_rels = NIL;
-	
+
 	/*
 	 * Make a flattened version of the rangetable for faster access (this is
 	 * OK because the rangetable won't change any more).
 	 */
 	root->simple_rte_array = (RangeTblEntry **)
-	palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
+		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
 	rti = 1;
 	foreach(lc, parse->rtable)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-		
+
 		root->simple_rte_array[rti++] = rte;
 	}
-	
+
 	/*
 	 * Construct RelOptInfo nodes for all base relations in query, and
 	 * indirectly for all appendrel member relations ("other rels").  This
@@ -194,7 +194,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * for example views.  We don't want to make RelOptInfos for them.
 	 */
 	add_base_rels_to_query(root, (Node *) parse->jointree);
-	
+
 	/*
 	 * We should now have size estimates for every actual table involved in
 	 * the query, so we can compute total_table_pages.	Note that appendrels
@@ -210,16 +210,16 @@ query_planner(PlannerInfo *root, List *tlist,
 	for (rti = 1; rti < root->simple_rel_array_size; rti++)
 	{
 		RelOptInfo *brel = root->simple_rel_array[rti];
-		
+
 		if (brel == NULL)
 			continue;
-		
+
 		Assert(brel->relid == rti);		/* sanity check on array */
-		
+
 		total_pages += (double) brel->pages;
 	}
 	root->total_table_pages = total_pages;
-	
+
 	/*
 	 * Examine the targetlist and join tree, adding entries to baserel
 	 * targetlists for all referenced Vars, and generating PlaceHolderInfo
@@ -231,31 +231,31 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * make_one_rel() to work from.
 	 */
 	build_base_rel_tlists(root, tlist);
-	
+
 	find_placeholders_in_jointree(root);
-	
+
 	joinlist = deconstruct_jointree(root);
-	
+
 	/*
 	 * Reconsider any postponed outer-join quals now that we have built up
 	 * equivalence classes.  (This could result in further additions or
 	 * mergings of classes.)
 	 */
 	reconsider_outer_join_clauses(root);
-	
+
 	/**
 	 * Use the list of equijoined keys to transfer quals between relations.  For example,
 	 *   A=B AND f(A) implies A=B AND f(A) and f(B), under some restrictions on f.
 	 */
 	generate_implied_quals(root);
-	
+
 	/*
 	 * If we formed any equivalence classes, generate additional restriction
 	 * clauses as appropriate.	(Implied join clauses are formed on-the-fly
 	 * later.)
 	 */
 	generate_base_implied_equalities(root);
-	
+
 	/*
 	 * We have completed merging equivalence sets, so it's now possible to
 	 * convert the requested query_pathkeys to canonical form.	Also
@@ -267,23 +267,23 @@ query_planner(PlannerInfo *root, List *tlist,
 	root->window_pathkeys = canonicalize_pathkeys(root, root->window_pathkeys);
 	root->distinct_pathkeys = canonicalize_pathkeys(root, root->distinct_pathkeys);
 	root->sort_pathkeys = canonicalize_pathkeys(root, root->sort_pathkeys);
-	
+
 	/*
 	 * Examine any "placeholder" expressions generated during subquery pullup.
 	 * Make sure that the Vars they need are marked as needed at the relevant
 	 * join level.
 	 */
 	fix_placeholder_input_needed_levels(root);
-	
+
 	/*
 	 * Ready to do the primary planning.
 	 */
 	final_rel = make_one_rel(root, joinlist);
-	
+
 	if (!final_rel || !final_rel->cheapest_total_path)
 		elog(ERROR, "failed to construct the join relation");
 	Insist(final_rel->cheapest_startup_path);
-	
+
 	/*
 	 * CDB: Subquery duplicate suppression should be all finished by now.
 	 *
@@ -294,7 +294,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	 */
 	Insist(final_rel->cheapest_startup_path->subq_complete &&
 		   final_rel->cheapest_total_path->subq_complete);
-	
+
 	/*
 	 * If there's grouping going on, estimate the number of result groups. We
 	 * couldn't do this any earlier because it depends on relation size
@@ -311,7 +311,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	if (parse->groupClause)
 	{
 		List	   *groupExprs;
-		
+
 		groupExprs = get_grouplist_exprs(parse->groupClause,
 										 parse->targetList);
 		if (groupExprs == NULL)
@@ -320,7 +320,7 @@ query_planner(PlannerInfo *root, List *tlist,
 			*num_groups = estimate_num_groups(root,
 											  groupExprs,
 											  final_rel->rows);
-		
+
 		/*
 		 * In GROUP BY mode, an absolute LIMIT is relative to the number of
 		 * groups not the number of tuples.  If the caller gave us a fraction,
@@ -329,7 +329,7 @@ query_planner(PlannerInfo *root, List *tlist,
 		 */
 		if (tuple_fraction >= 1.0)
 			tuple_fraction /= *num_groups;
-		
+
 		/*
 		 * If both GROUP BY and ORDER BY are specified, we will need two
 		 * levels of sort --- and, therefore, certainly need to read all the
@@ -337,7 +337,7 @@ query_planner(PlannerInfo *root, List *tlist,
 		 * we have both DISTINCT and GROUP BY.
 		 */
 		if ((root->group_pathkeys && root->sort_pathkeys &&
-			 !pathkeys_contained_in(root->sort_pathkeys, root->group_pathkeys)) ||
+			!pathkeys_contained_in(root->sort_pathkeys, root->group_pathkeys)) ||
 			(root->group_pathkeys && root->distinct_pathkeys &&
 			 !pathkeys_contained_in(root->distinct_pathkeys, root->group_pathkeys)))
 			tuple_fraction = 0.0;
@@ -361,13 +361,13 @@ query_planner(PlannerInfo *root, List *tlist,
 		 * distinct already.)
 		 */
 		List	   *distinctExprs;
-		
+
 		distinctExprs = get_sortgrouplist_exprs(parse->distinctClause,
 												parse->targetList);
 		*num_groups = estimate_num_groups(root,
 										  distinctExprs,
 										  final_rel->rows);
-		
+
 		/*
 		 * Adjust tuple_fraction the same way as for GROUP BY, too.
 		 */
@@ -383,7 +383,7 @@ query_planner(PlannerInfo *root, List *tlist,
 		if (tuple_fraction >= 1.0)
 			tuple_fraction /= final_rel->rows;
 	}
-	
+
 	/*
 	 * Pick out the cheapest-total path and the cheapest presorted path for
 	 * the requested pathkeys (if there is one).  We should take the tuple
@@ -399,16 +399,16 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * this routine thinks the presorted path is the winner.
 	 */
 	cheapestpath = final_rel->cheapest_total_path;
-	
+
 	sortedpath =
-	get_cheapest_fractional_path_for_pathkeys(final_rel->pathlist,
-											  root->query_pathkeys,
-											  tuple_fraction);
-	
+		get_cheapest_fractional_path_for_pathkeys(final_rel->pathlist,
+												  root->query_pathkeys,
+												  tuple_fraction);
+
 	/* Don't return same path in both guises; just wastes effort */
 	if (sortedpath == cheapestpath)
 		sortedpath = NULL;
-	
+
 	/*
 	 * Forget about the presorted path if it would be cheaper to sort the
 	 * cheapest-total path.  Here we need consider only the behavior at the
@@ -417,7 +417,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	if (sortedpath)
 	{
 		Path		sort_path;	/* dummy for result of cost_sort */
-		
+
 		if (root->query_pathkeys == NIL ||
 			pathkeys_contained_in(root->query_pathkeys,
 								  cheapestpath->pathkeys))
@@ -434,7 +434,7 @@ query_planner(PlannerInfo *root, List *tlist,
 					  cdbpath_rows(root, cheapestpath), final_rel->width,
 					  limit_tuples);
 		}
-		
+
 		if (compare_fractional_path_costs(sortedpath, &sort_path,
 										  tuple_fraction) > 0)
 		{
@@ -442,7 +442,7 @@ query_planner(PlannerInfo *root, List *tlist,
 			sortedpath = NULL;
 		}
 	}
-	
+
 	*cheapest_path = cheapestpath;
 	*sorted_path = sortedpath;
 }
@@ -459,35 +459,35 @@ static Bitmapset *
 distcols_in_groupclause(List *gc, Bitmapset *bms)
 {
 	ListCell *l;
-	
+
 	foreach(l, gc)
 	{
 		Node *node = lfirst(l);
-		
+
 		if (node == NULL)
 			continue;
-		
+
 		Assert(IsA(node, SortGroupClause) ||
 			   IsA(node, List) ||
 			   IsA(node, GroupingClause));
-		
+
 		if (IsA(node, SortGroupClause))
 		{
 			bms = bms_add_member(bms, ((SortGroupClause *) node)->tleSortGroupRef);
 		}
-		
+
 		else if (IsA(node, List))
 		{
 			bms = distcols_in_groupclause((List *)node, bms);
 		}
-		
+
 		else if (IsA(node, GroupingClause))
 		{
 			List *groupsets = ((GroupingClause *)node)->groupsets;
 			bms = distcols_in_groupclause(groupsets, bms);
 		}
 	}
-	
+
 	return bms;
 }
 
@@ -501,12 +501,12 @@ num_distcols_in_grouplist(List *gc)
 {
 	Bitmapset *bms = NULL;
 	int num_cols;
-	
+
 	bms = distcols_in_groupclause(gc, bms);
-	
+
 	num_cols = bms_num_members(bms);
 	bms_free(bms);
-	
+
 	return num_cols;
 }
 
@@ -536,7 +536,7 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->gp_enable_predicate_propagation = gp_enable_predicate_propagation;
 	c1->mpp_trying_fallback_plan = false;
 	c1->constraint_exclusion = constraint_exclusion;
-	
+
 	c1->gp_enable_multiphase_agg = gp_enable_multiphase_agg;
 	c1->gp_enable_preunique = gp_enable_preunique;
 	c1->gp_eager_preunique = gp_eager_preunique;
@@ -551,14 +551,14 @@ PlannerConfig *DefaultPlannerConfig(void)
 	c1->gp_enable_groupext_distinct_gather = gp_enable_groupext_distinct_gather;
 	c1->gp_enable_sort_limit = gp_enable_sort_limit;
 	c1->gp_enable_sort_distinct = gp_enable_sort_distinct;
-	
+
 	c1->gp_enable_direct_dispatch = gp_enable_direct_dispatch;
 	c1->gp_dynamic_partition_pruning = gp_dynamic_partition_pruning;
-	
+
 	c1->gp_cte_sharing = gp_cte_sharing;
-	
+
 	c1->honor_order_by = true;
-	
+
 	return c1;
 }
 
@@ -569,7 +569,7 @@ PlannerConfig *
 CopyPlannerConfig(const PlannerConfig *c1)
 {
 	PlannerConfig *c2 = (PlannerConfig *) palloc(sizeof(PlannerConfig));
-	
+
 	memcpy(c2, c1, sizeof(PlannerConfig));
 	return c2;
 }

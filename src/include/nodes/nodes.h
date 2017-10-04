@@ -28,7 +28,7 @@
 typedef enum NodeTag
 {
 	T_Invalid = 0,
-	
+
 	/*
 	 * TAGS FOR EXECUTOR NODES (execnodes.h)
 	 */
@@ -47,14 +47,14 @@ typedef enum NodeTag
 	T_PartitionState,
 	T_QueryDispatchDesc,
 	T_OidAssignment,
-	
+
 	/*
 	 * TAGS FOR PLAN NODES (plannodes.h)
 	 */
 	T_Plan = 100,
 	T_Scan,
 	T_Join,
-	
+
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
 	 * It will take the form of IndexScan, SeqScan, etc.
 	 * CteScan will take the form of SubqueryScan.
@@ -107,7 +107,7 @@ typedef enum NodeTag
 	T_Plan_End,
 	/* this one isn't a subclass of Plan: */
 	T_PlanInvalItem,
-	
+
 	/*
 	 * TAGS FOR PLAN STATE NODES (execnodes.h)
 	 *
@@ -116,7 +116,7 @@ typedef enum NodeTag
 	T_PlanState = 200,
 	T_ScanState,
 	T_JoinState,
-	
+
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
 	 * It will take the form of IndexScan, SeqScan, etc.
 	 */
@@ -165,7 +165,7 @@ typedef enum NodeTag
 	T_AssertOpState,
 	T_PartitionSelectorState,
 	T_TupleDescNode,
-	
+
 	/*
 	 * TAGS FOR PRIMITIVE NODES (primnodes.h)
 	 */
@@ -225,7 +225,7 @@ typedef enum NodeTag
 	T_PartListRuleExpr,
 	T_PartListNullTestExpr,
 	T_TableOidInfo,
-	
+
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
 	 *
@@ -267,7 +267,7 @@ typedef enum NodeTag
 	T_PartBoundOpenExprState,
 	T_PartListRuleExprState,
 	T_PartListNullTestExprState,
-	
+
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)
 	 */
@@ -309,19 +309,19 @@ typedef enum NodeTag
 	T_PgPartRule,
 	T_SegfileMapNode,
 	T_PlannerParamItem,
-	
-	/* Tags for MPP planner nodes (relation.h) */
-	T_CdbMotionPath = 580,
-	T_CdbRelDedupInfo,
-	T_CdbRelColumnInfo,
-	
+
+    /* Tags for MPP planner nodes (relation.h) */
+    T_CdbMotionPath = 580,
+    T_CdbRelDedupInfo,
+    T_CdbRelColumnInfo,
+
 	/*
 	 * TAGS FOR MEMORY NODES (memnodes.h)
 	 */
 	T_MemoryContext = 600,
 	T_AllocSetContext,
 	T_MemoryAccount,
-	
+
 	/*
 	 * TAGS FOR VALUE NODES (value.h)
 	 */
@@ -331,14 +331,14 @@ typedef enum NodeTag
 	T_String,
 	T_BitString,
 	T_Null,
-	
+
 	/*
 	 * TAGS FOR LIST NODES (pg_list.h)
 	 */
 	T_List,
 	T_IntList,
 	T_OidList,
-	
+
 	/*
 	 * TAGS FOR STATEMENT NODES (mostly in parsenodes.h)
 	 */
@@ -452,7 +452,7 @@ typedef enum NodeTag
 	T_AlterExtensionStmt,
 	T_AlterExtensionContentsStmt,
 	T_SetDistributionCmd,
-	
+
 	/*
 	 * TAGS FOR PARSE TREE NODES (parsenodes.h)
 	 */
@@ -494,14 +494,14 @@ typedef enum NodeTag
 	T_WithClause,
 	T_CommonTableExpr,
 	T_ColumnReferenceStorageDirective,
-	
+
 	/*
 	 * TAGS FOR REPLICATION GRAMMAR PARSE NODES (replnodes.h)
 	 */
 	T_IdentifySystemCmd,
 	T_BaseBackupCmd,
 	T_StartReplicationCmd,
-	
+
 	/*
 	 * TAGS FOR RANDOM OTHER STUFF
 	 *
@@ -514,17 +514,17 @@ typedef enum NodeTag
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
 	T_WindowObjectData,			/* private in nodeWindowAgg.c */
 	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
-	T_HashBitmap,               /* in nodes/tidbitmap.h */
-	T_StreamBitmap,             /* in nodes/tidbitmap.h */
+    T_HashBitmap,               /* in nodes/tidbitmap.h */
+    T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
 	T_CookedConstraint,			/* in catalog/heap.h */
-	
-	/* CDB: tags for random other stuff */
-	T_CdbExplain_StatHdr = 1000,             /* in cdb/cdbexplain.c */
-	
+
+    /* CDB: tags for random other stuff */
+    T_CdbExplain_StatHdr = 1000,             /* in cdb/cdbexplain.c */
+
 } NodeTag;
 
 /*
@@ -556,10 +556,10 @@ typedef struct Node
 /* With GCC, we can use a compound statement within an expression */
 #define newNode(size, tag) \
 ({	Node   *_result; \
-AssertMacro((size) >= sizeof(Node));		/* need the tag, at least */ \
-_result = (Node *) palloc0fast(size); \
-_result->type = (tag); \
-_result; \
+	AssertMacro((size) >= sizeof(Node));		/* need the tag, at least */ \
+	_result = (Node *) palloc0fast(size); \
+	_result->type = (tag); \
+	_result; \
 })
 #else
 
@@ -573,10 +573,10 @@ extern PGDLLIMPORT Node *newNodeMacroHolder;
 
 #define newNode(size, tag) \
 ( \
-AssertMacro((size) >= sizeof(Node)),		/* need the tag, at least */ \
-newNodeMacroHolder = (Node *) palloc0fast(size), \
-newNodeMacroHolder->type = (tag), \
-newNodeMacroHolder \
+	AssertMacro((size) >= sizeof(Node)),		/* need the tag, at least */ \
+	newNodeMacroHolder = (Node *) palloc0fast(size), \
+	newNodeMacroHolder->type = (tag), \
+	newNodeMacroHolder \
 )
 #endif   /* __GNUC__ */
 
@@ -671,7 +671,7 @@ typedef enum JoinType
 	JOIN_LEFT,					/* pairs + unmatched LHS tuples */
 	JOIN_FULL,					/* pairs + unmatched LHS + unmatched RHS */
 	JOIN_RIGHT,					/* pairs + unmatched RHS tuples */
-	
+
 	/*
 	 * Semijoins and anti-semijoins (as defined in relational theory) do
 	 * not appear in the SQL JOIN syntax, but there are standard idioms for
@@ -680,17 +680,17 @@ typedef enum JoinType
 	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
 	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row
 	 * is guaranteed to be null-extended.
-	 *
-	 * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
-	 * JOIN_UNIQUE_INNER.  The definitions are retained in case they
-	 * might be referenced in the source code of user-defined
-	 * selectivity functions brought over from PostgreSQL.
+     *
+     * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
+     * JOIN_UNIQUE_INNER.  The definitions are retained in case they
+     * might be referenced in the source code of user-defined
+     * selectivity functions brought over from PostgreSQL.
 	 */
 	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
 	JOIN_ANTI,					/* 1 copy of each LHS row that has no match */
 	JOIN_LASJ_NOTIN,			/* Left Anti Semi Join with Not-In semantics:
-								 If any NULL values are produced by inner side,
-								 return no join results. Otherwise, same as LASJ */
+									If any NULL values are produced by inner side,
+									return no join results. Otherwise, same as LASJ */
 	JOIN_REVERSE_IN,			/* at most one result per inner row */
 	/*
 	 * These codes are used internally in the planner, but are not supported
@@ -718,12 +718,12 @@ typedef enum JoinType
  * quals attached to a semijoin can be treated the same as innerjoin quals.
  */
 #define IS_OUTER_JOIN(jointype) \
-(((1 << (jointype)) & \
-((1 << JOIN_LEFT) | \
-(1 << JOIN_FULL) | \
-(1 << JOIN_RIGHT) | \
-(1 << JOIN_ANTI) | \
-(1 << JOIN_LASJ_NOTIN))) != 0)
+	(((1 << (jointype)) & \
+	  ((1 << JOIN_LEFT) | \
+	   (1 << JOIN_FULL) | \
+	   (1 << JOIN_RIGHT) | \
+	   (1 << JOIN_ANTI) | \
+	   (1 << JOIN_LASJ_NOTIN))) != 0)
 
 /*
  * FlowType - kinds of tuple flows in parallelized plans.
@@ -749,7 +749,7 @@ typedef enum DispatchMethod
 	DISPATCH_UNDETERMINED = 0,	/* Used prior to determination. */
 	DISPATCH_SEQUENTIAL,		/* Dispatch on entry postgres process only. */
 	DISPATCH_PARALLEL			/* Dispatch on query executor and entry processes. */
-	
+
 } DispatchMethod;
 
 /*
@@ -759,8 +759,8 @@ typedef enum DispatchMethod
  * isn't legal if the function is being used outside this context.
  */
 #define IS_AGG_EXECUTION_NODE(node) \
-((IsA((Node *)(node), AggState) || IsA((Node *)(node), WindowAggState)) ? \
-true : false)
+	((IsA((Node *)(node), AggState) || IsA((Node *)(node), WindowAggState)) ? \
+	 true : false)
 
 /*
  * If the partIndex in Scan set to 0 then we don't have
@@ -769,4 +769,3 @@ true : false)
 #define INVALID_PART_INDEX 0
 
 #endif   /* NODES_H */
-
