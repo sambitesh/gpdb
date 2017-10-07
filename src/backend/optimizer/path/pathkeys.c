@@ -38,14 +38,14 @@
 #include "cdb/cdbpullup.h"		/* cdbpullup_expr(), cdbpullup_make_var() */
 
 static PathKey *make_canonical_pathkey(PlannerInfo *root,
-									   EquivalenceClass *eclass, Oid opfamily,
-									   int strategy, bool nulls_first);
+					   EquivalenceClass *eclass, Oid opfamily,
+					   int strategy, bool nulls_first);
 static bool pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys);
 static PathKey *make_pathkey_from_sortinfo(PlannerInfo *root,
-										   Expr *expr, Oid ordering_op,
-										   bool nulls_first,
-										   Index sortref,
-										   bool canonicalize);
+						   Expr *expr, Oid ordering_op,
+						   bool nulls_first,
+						   Index sortref,
+						   bool canonicalize);
 static bool right_merge_direction(PlannerInfo *root, PathKey *pathkey);
 
 
@@ -65,12 +65,12 @@ makePathKey(EquivalenceClass *eclass, Oid opfamily,
 			int strategy, bool nulls_first)
 {
 	PathKey    *pk = makeNode(PathKey);
-	
+
 	pk->pk_eclass = eclass;
 	pk->pk_opfamily = opfamily;
 	pk->pk_strategy = strategy;
 	pk->pk_nulls_first = nulls_first;
-	
+
 	return pk;
 }
 
@@ -89,17 +89,17 @@ Node *
 replace_expression_mutator(Node *node, void *context)
 {
 	ReplaceExpressionMutatorReplacement *repl;
-	
+
 	if (node == NULL)
 		return NULL;
-	
+
 	if (IsA(node, RestrictInfo))
 	{
 		RestrictInfo *info = (RestrictInfo *) node;
-		
+
 		return replace_expression_mutator((Node *) info->clause, context);
 	}
-	
+
 	repl = (ReplaceExpressionMutatorReplacement *) context;
 	if (equal(node, repl->replaceThis))
 	{
@@ -129,11 +129,11 @@ gen_implied_qual(PlannerInfo *root,
 	ListCell   *lc;
 	RestrictInfo *new_rinfo;
 	Relids		required_relids;
-	
+
 	/* Expression types must match */
 	Assert(exprType(old_expr) == exprType(new_expr)
 		   && exprTypmod(old_expr) == exprTypmod(new_expr));
-	
+
 	/*
 	 * Clone the clause, replacing first node with the second.
 	 */
@@ -141,23 +141,23 @@ gen_implied_qual(PlannerInfo *root,
 	ctx.withThis = new_expr;
 	ctx.numReplacementsDone = 0;
 	new_clause = (Node *) replace_expression_mutator((Node *) old_rinfo->clause, &ctx);
-	
+
 	if (ctx.numReplacementsDone == 0)
 		return;
-	
+
 	new_qualscope = pull_varnos(new_clause);
-	
+
 	/* distribute_qual_to_rels doesn't accept pseudoconstants? XXX: doesn't it? */
 	if (new_qualscope == NULL)
 		return;
-	
+
 	if (subexpression_match((Expr *) new_expr, old_rinfo->clause))
 		return;
-	
+
 	/* No inferences may be performed across an outer join */
 	if (old_rinfo->ojscope_relids && !bms_is_subset(new_qualscope, old_rinfo->ojscope_relids))
 		return;
-	
+
 	/*
 	 * Have we seen this clause before? This is needed to avoid infinite
 	 * recursion.
@@ -165,11 +165,11 @@ gen_implied_qual(PlannerInfo *root,
 	foreach(lc, root->non_eq_clauses)
 	{
 		RestrictInfo *r = (RestrictInfo *) lfirst(lc);
-		
+
 		if (equal(r->clause, new_clause))
 			return;
 	}
-	
+
 	/*
 	 * Ok, we're good to go. Construct a new RestrictInfo, and pass it to
 	 * distribute_to_rels(). This is a cut-down version of
@@ -178,7 +178,7 @@ gen_implied_qual(PlannerInfo *root,
 	 * wasn't either.
 	 */
 	required_relids = bms_union(new_qualscope, old_rinfo->ojscope_relids);
-	
+
 	new_rinfo = make_restrictinfo((Expr *) new_clause,
 								  old_rinfo->is_pushed_down,
 								  old_rinfo->outerjoin_delayed,
@@ -186,7 +186,7 @@ gen_implied_qual(PlannerInfo *root,
 								  required_relids,
 								  old_rinfo->nullable_relids,
 								  old_rinfo->ojscope_relids);
-	
+
 	/*
 	 * If it's a join clause (either naturally, or because delayed by
 	 * outer-join rules), add vars used in the clause to targetlists of their
@@ -198,18 +198,18 @@ gen_implied_qual(PlannerInfo *root,
 		List	   *vars = pull_var_clause(new_clause,
 										   PVC_RECURSE_AGGREGATES,
 										   PVC_INCLUDE_PLACEHOLDERS);
-		
+
 		add_vars_to_targetlist(root, vars, required_relids);
 		list_free(vars);
 	}
-	
+
 	distribute_restrictinfo_to_rels(root, new_rinfo);
 }
 
 /**
  * Generate all qualifications that are implied by the given RestrictInfo and
  * the equivalence classes.
- 
+
  * Input:
  * - root: planner info structure
  * - rinfo: clause to derive more quals from.
@@ -218,7 +218,7 @@ static void
 gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 {
 	ListCell   *lcec;
-	
+
 	/*
 	 * Is it safe to infer from this clause?
 	 */
@@ -227,7 +227,7 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 	{
 		return;
 	}
-	
+
 	/*
 	 * Find every equivalence class that's relevant for this RestrictInfo.
 	 *
@@ -238,23 +238,23 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 	{
 		EquivalenceClass *eclass = (EquivalenceClass *) lfirst(lcec);
 		ListCell   *lcem1;
-		
+
 		/* Single-member ECs won't generate any deductions */
 		if (list_length(eclass->ec_members) <= 1)
 			continue;
-		
+
 		if (!bms_overlap(eclass->ec_relids, rinfo->clause_relids))
 			continue;			/* none of the members can appear in the
 								 * clause */
-		
+
 		foreach(lcem1, eclass->ec_members)
 		{
 			EquivalenceMember *em1 = (EquivalenceMember *) lfirst(lcem1);
 			ListCell   *lcem2;
-			
+
 			if (!bms_overlap(em1->em_relids, rinfo->clause_relids))
 				continue;		/* this member cannot appear in the clause */
-			
+
 			/*
 			 * Skip duplicating subplans clauses as multiple subplan node referring
 			 * to the same plan node fails the assertion made by the code which adds
@@ -266,10 +266,10 @@ gen_implied_quals(PlannerInfo *root, RestrictInfo *rinfo)
 			foreach(lcem2, eclass->ec_members)
 			{
 				EquivalenceMember *em2 = (EquivalenceMember *) lfirst(lcem2);
-				
+
 				if (em2 == em1)
 					continue;
-				
+
 				if (exprType((Node *) em1->em_expr) == exprType((Node *) em2->em_expr)
 					&& exprTypmod((Node *) em1->em_expr) == exprTypmod((Node *) em2->em_expr))
 				{
@@ -298,16 +298,16 @@ void
 generate_implied_quals(PlannerInfo *root)
 {
 	ListCell   *lc;
-	
+
 	if (!root->config->gp_enable_predicate_propagation)
 		return;
-	
+
 	foreach(lc, root->non_eq_clauses)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
-		
+
 		gen_implied_quals(root, rinfo);
-		
+
 		/*
 		 * NOTE: gen_implied_quals() can append more quals to the list! We
 		 * will process those as well, as we iterate.
@@ -332,11 +332,11 @@ make_canonical_pathkey(PlannerInfo *root,
 	PathKey    *pk;
 	ListCell   *lc;
 	MemoryContext oldcontext;
-	
+
 	/* The passed eclass might be non-canonical, so chase up to the top */
 	while (eclass->ec_merged)
 		eclass = eclass->ec_merged;
-	
+
 	foreach(lc, root->canon_pathkeys)
 	{
 		pk = (PathKey *) lfirst(lc);
@@ -346,18 +346,18 @@ make_canonical_pathkey(PlannerInfo *root,
 			nulls_first == pk->pk_nulls_first)
 			return pk;
 	}
-	
+
 	/*
 	 * Be sure canonical pathkeys are allocated in the main planning context.
 	 * Not an issue in normal planning, but it is for GEQO.
 	 */
 	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
-	
+
 	pk = makePathKey(eclass, opfamily, strategy, nulls_first);
 	root->canon_pathkeys = lappend(root->canon_pathkeys, pk);
-	
+
 	MemoryContextSwitchTo(oldcontext);
-	
+
 	return pk;
 }
 
@@ -396,26 +396,26 @@ pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys)
 {
 	EquivalenceClass *new_ec = new_pathkey->pk_eclass;
 	ListCell   *lc;
-	
+
 	/* Assert we've been given canonical pathkeys */
 	Assert(!new_ec->ec_merged);
-	
+
 	/* Check for EC containing a constant --- unconditionally redundant */
 	if (EC_MUST_BE_REDUNDANT(new_ec))
 		return true;
-	
+
 	/* If same EC already used in list, then redundant */
 	foreach(lc, pathkeys)
 	{
 		PathKey    *old_pathkey = (PathKey *) lfirst(lc);
-		
+
 		/* Assert we've been given canonical pathkeys */
 		Assert(!old_pathkey->pk_eclass->ec_merged);
-		
+
 		if (new_ec == old_pathkey->pk_eclass)
 			return true;
 	}
-	
+
 	return false;
 }
 
@@ -431,18 +431,18 @@ canonicalize_pathkeys(PlannerInfo *root, List *pathkeys)
 {
 	List	   *new_pathkeys = NIL;
 	ListCell   *l;
-	
+
 	foreach(l, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(l);
 		EquivalenceClass *eclass;
 		PathKey    *cpathkey;
-		
+
 		/* Find the canonical (merged) EquivalenceClass */
 		eclass = pathkey->pk_eclass;
 		while (eclass->ec_merged)
 			eclass = eclass->ec_merged;
-		
+
 		/*
 		 * If we can tell it's redundant just from the EC, skip.
 		 * pathkey_is_redundant would notice that, but we needn't even bother
@@ -450,14 +450,14 @@ canonicalize_pathkeys(PlannerInfo *root, List *pathkeys)
 		 */
 		if (EC_MUST_BE_REDUNDANT(eclass))
 			continue;
-		
+
 		/* OK, build a canonicalized PathKey struct */
 		cpathkey = make_canonical_pathkey(root,
 										  eclass,
 										  pathkey->pk_opfamily,
 										  pathkey->pk_strategy,
 										  pathkey->pk_nulls_first);
-		
+
 		/* Add to list unless redundant */
 		if (!pathkey_is_redundant(cpathkey, new_pathkeys))
 			new_pathkeys = lappend(new_pathkeys, cpathkey);
@@ -485,12 +485,12 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 						   bool canonicalize)
 {
 	Oid			opfamily,
-	opcintype;
+				opcintype;
 	int16		strategy;
 	Oid			equality_op;
 	List	   *opfamilies;
 	EquivalenceClass *eclass;
-	
+
 	/*
 	 * An ordering operator fully determines the behavior of its opfamily, so
 	 * could only meaningfully appear in one family --- or perhaps two if one
@@ -500,7 +500,7 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 	 * bigger.	So, look up the equality operator that goes with the ordering
 	 * operator (this should be unique) and get its membership.
 	 */
-	
+
 	/* Find the operator in pg_amop --- failure shouldn't happen */
 	if (!get_ordering_op_properties(ordering_op,
 									&opfamily, &opcintype, &strategy))
@@ -518,7 +518,7 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 	if (!opfamilies)			/* certainly should find some */
 		elog(ERROR, "could not find opfamilies for ordering operator %u",
 			 ordering_op);
-	
+
 	/*
 	 * When dealing with binary-compatible opclasses, we have to ensure that
 	 * the exposed type of the expression tree matches the declared input type
@@ -543,11 +543,11 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 											-1,
 											COERCE_DONTCARE);
 	}
-	
+
 	/* Now find or create a matching EquivalenceClass */
 	eclass = get_eclass_for_sort_expr(root, expr, opcintype, opfamilies,
 									  sortref);
-	
+
 	/* And finally we can find or create a PathKey node */
 	if (canonicalize)
 		return make_canonical_pathkey(root, eclass, opfamily,
@@ -574,13 +574,13 @@ PathKeysComparison
 compare_pathkeys(List *keys1, List *keys2)
 {
 	ListCell   *key1,
-	*key2;
-	
+			   *key2;
+
 	forboth(key1, keys1, key2, keys2)
 	{
 		PathKey    *pathkey1 = (PathKey *) lfirst(key1);
 		PathKey    *pathkey2 = (PathKey *) lfirst(key2);
-		
+
 		/*
 		 * XXX would like to check that we've been given canonicalized input,
 		 * but PlannerInfo not accessible here...
@@ -589,11 +589,11 @@ compare_pathkeys(List *keys1, List *keys2)
 		Assert(list_member_ptr(root->canon_pathkeys, pathkey1));
 		Assert(list_member_ptr(root->canon_pathkeys, pathkey2));
 #endif
-		
+
 		if (pathkey1 != pathkey2)
 			return PATHKEYS_DIFFERENT;	/* no need to keep looking */
 	}
-	
+
 	/*
 	 * If we reached the end of only one list, the other is longer and
 	 * therefore not a subset.
@@ -639,11 +639,11 @@ get_cheapest_path_for_pathkeys(List *paths, List *pathkeys,
 {
 	Path	   *matched_path = NULL;
 	ListCell   *l;
-	
+
 	foreach(l, paths)
 	{
 		Path	   *path = (Path *) lfirst(l);
-		
+
 		/*
 		 * Since cost comparison is a lot cheaper than pathkey comparison, do
 		 * that first.	(XXX is that still true?)
@@ -651,7 +651,7 @@ get_cheapest_path_for_pathkeys(List *paths, List *pathkeys,
 		if (matched_path != NULL &&
 			compare_path_costs(matched_path, path, cost_criterion) <= 0)
 			continue;
-		
+
 		if (pathkeys_contained_in(pathkeys, path->pathkeys))
 			matched_path = path;
 	}
@@ -678,11 +678,11 @@ get_cheapest_fractional_path_for_pathkeys(List *paths,
 {
 	Path	   *matched_path = NULL;
 	ListCell   *l;
-	
+
 	foreach(l, paths)
 	{
 		Path	   *path = (Path *) lfirst(l);
-		
+
 		/*
 		 * Since cost comparison is a lot cheaper than pathkey comparison, do
 		 * that first.
@@ -690,7 +690,7 @@ get_cheapest_fractional_path_for_pathkeys(List *paths,
 		if (matched_path != NULL &&
 			compare_fractional_path_costs(matched_path, path, fraction) <= 0)
 			continue;
-		
+
 		if (pathkeys_contained_in(pathkeys, path->pathkeys))
 			matched_path = path;
 	}
@@ -725,7 +725,7 @@ build_index_pathkeys(PlannerInfo *root,
 	List	   *retval = NIL;
 	ListCell   *indexprs_item = list_head(index->indexprs);
 	int			i;
-	
+
 	for (i = 0; i < index->ncolumns; i++)
 	{
 		Oid			sortop;
@@ -733,7 +733,7 @@ build_index_pathkeys(PlannerInfo *root,
 		int			ikey;
 		Expr	   *indexkey;
 		PathKey    *cpathkey;
-		
+
 		if (ScanDirectionIsBackward(scandir))
 		{
 			sortop = index->revsortop[i];
@@ -744,10 +744,10 @@ build_index_pathkeys(PlannerInfo *root,
 			sortop = index->fwdsortop[i];
 			nulls_first = index->nulls_first[i];
 		}
-		
+
 		if (!OidIsValid(sortop))
 			break;				/* no more orderable columns */
-		
+
 		ikey = index->indexkeys[i];
 		if (ikey != 0)
 		{
@@ -762,7 +762,7 @@ build_index_pathkeys(PlannerInfo *root,
 			indexkey = (Expr *) lfirst(indexprs_item);
 			indexprs_item = lnext(indexprs_item);
 		}
-		
+
 		/* OK, make a canonical pathkey for this sort key */
 		cpathkey = make_pathkey_from_sortinfo(root,
 											  indexkey,
@@ -770,12 +770,12 @@ build_index_pathkeys(PlannerInfo *root,
 											  nulls_first,
 											  0,
 											  true);
-		
+
 		/* Add to list unless redundant */
 		if (!pathkey_is_redundant(cpathkey, retval))
 			retval = lappend(retval, cpathkey);
 	}
-	
+
 	return retval;
 }
 
@@ -794,22 +794,22 @@ find_indexkey_var(PlannerInfo *root, RelOptInfo *rel, AttrNumber varattno)
 	ListCell   *temp;
 	Index		relid;
 	Oid			reloid,
-	vartypeid;
+				vartypeid;
 	int32		type_mod;
-	
+
 	foreach(temp, rel->reltargetlist)
 	{
 		Var		   *var = (Var *) lfirst(temp);
-		
+
 		if (IsA(var, Var) &&
 			var->varattno == varattno)
 			return var;
 	}
-	
+
 	relid = rel->relid;
 	reloid = getrelid(relid, root->parse->rtable);
 	get_atttypetypmod(reloid, varattno, &vartypeid, &type_mod);
-	
+
 	return makeVar(relid, varattno, vartypeid, type_mod, 0);
 }
 
@@ -835,13 +835,13 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 	int			outer_query_keys = list_length(root->query_pathkeys);
 	List	   *sub_tlist = rel->subplan->targetlist;
 	ListCell   *i;
-	
+
 	foreach(i, subquery_pathkeys)
 	{
 		PathKey    *sub_pathkey = (PathKey *) lfirst(i);
 		EquivalenceClass *sub_eclass = sub_pathkey->pk_eclass;
 		PathKey    *best_pathkey = NULL;
-		
+
 		if (sub_eclass->ec_has_volatile)
 		{
 			/*
@@ -850,7 +850,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 			 * that same targetlist entry.
 			 */
 			TargetEntry *tle;
-			
+
 			if (sub_eclass->ec_sortref == 0)	/* can't happen */
 				elog(ERROR, "volatile EquivalenceClass has no sortref");
 			tle = get_sortgroupref_tle(sub_eclass->ec_sortref, sub_tlist);
@@ -862,27 +862,27 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 				EquivalenceMember *sub_member;
 				Expr	   *outer_expr;
 				EquivalenceClass *outer_ec;
-				
+
 				Assert(list_length(sub_eclass->ec_members) == 1);
 				sub_member = (EquivalenceMember *) linitial(sub_eclass->ec_members);
 				outer_expr = (Expr *)
-				makeVar(rel->relid,
-						tle->resno,
-						exprType((Node *) tle->expr),
-						exprTypmod((Node *) tle->expr),
-						0);
+					makeVar(rel->relid,
+							tle->resno,
+							exprType((Node *) tle->expr),
+							exprTypmod((Node *) tle->expr),
+							0);
 				outer_ec =
-				get_eclass_for_sort_expr(root,
-										 outer_expr,
-										 sub_member->em_datatype,
-										 sub_eclass->ec_opfamilies,
-										 0);
+					get_eclass_for_sort_expr(root,
+											 outer_expr,
+											 sub_member->em_datatype,
+											 sub_eclass->ec_opfamilies,
+											 0);
 				best_pathkey =
-				make_canonical_pathkey(root,
-									   outer_ec,
-									   sub_pathkey->pk_opfamily,
-									   sub_pathkey->pk_strategy,
-									   sub_pathkey->pk_nulls_first);
+					make_canonical_pathkey(root,
+										   outer_ec,
+										   sub_pathkey->pk_opfamily,
+										   sub_pathkey->pk_strategy,
+										   sub_pathkey->pk_nulls_first);
 			}
 		}
 		else
@@ -905,14 +905,14 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 			 */
 			int			best_score = -1;
 			ListCell   *j;
-			
+
 			foreach(j, sub_eclass->ec_members)
 			{
 				EquivalenceMember *sub_member = (EquivalenceMember *) lfirst(j);
 				Expr	   *sub_expr = sub_member->em_expr;
 				Expr	   *sub_stripped;
 				ListCell   *k;
-				
+
 				/*
 				 * We handle two cases: the sub_pathkey key can be either an
 				 * exact match for a targetlist entry, or it could match after
@@ -923,7 +923,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 				sub_stripped = sub_expr;
 				while (sub_stripped && IsA(sub_stripped, RelabelType))
 					sub_stripped = ((RelabelType *) sub_stripped)->arg;
-				
+
 				foreach(k, sub_tlist)
 				{
 					TargetEntry *tle = (TargetEntry *) lfirst(k);
@@ -931,61 +931,61 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 					EquivalenceClass *outer_ec;
 					PathKey    *outer_pk;
 					int			score;
-					
+
 					/* resjunk items aren't visible to outer query */
 					if (tle->resjunk)
 						continue;
-					
+
 					if (equal(tle->expr, sub_expr))
 					{
 						/* Exact match */
 						outer_expr = (Expr *)
-						makeVar(rel->relid,
-								tle->resno,
-								exprType((Node *) tle->expr),
-								exprTypmod((Node *) tle->expr),
-								0);
-					}
-					else
-					{
-						Expr	   *tle_stripped;
-						
-						tle_stripped = tle->expr;
-						while (tle_stripped && IsA(tle_stripped, RelabelType))
-							tle_stripped = ((RelabelType *) tle_stripped)->arg;
-						
-						if (equal(tle_stripped, sub_stripped))
-						{
-							/* Match after discarding RelabelType */
-							outer_expr = (Expr *)
 							makeVar(rel->relid,
 									tle->resno,
 									exprType((Node *) tle->expr),
 									exprTypmod((Node *) tle->expr),
 									0);
+					}
+					else
+					{
+						Expr	   *tle_stripped;
+
+						tle_stripped = tle->expr;
+						while (tle_stripped && IsA(tle_stripped, RelabelType))
+							tle_stripped = ((RelabelType *) tle_stripped)->arg;
+
+						if (equal(tle_stripped, sub_stripped))
+						{
+							/* Match after discarding RelabelType */
+							outer_expr = (Expr *)
+								makeVar(rel->relid,
+										tle->resno,
+										exprType((Node *) tle->expr),
+										exprTypmod((Node *) tle->expr),
+										0);
 							if (exprType((Node *) outer_expr) !=
 								exprType((Node *) sub_expr))
 								outer_expr = (Expr *)
-								makeRelabelType(outer_expr,
-												exprType((Node *) sub_expr),
-												-1,
-												COERCE_DONTCARE);
+									makeRelabelType(outer_expr,
+												 exprType((Node *) sub_expr),
+													-1,
+													COERCE_DONTCARE);
 						}
 						else
 							continue;
 					}
-					
+
 					/* Found a representation for this sub_pathkey */
 					outer_ec = get_eclass_for_sort_expr(root,
 														outer_expr,
-														sub_member->em_datatype,
-														sub_eclass->ec_opfamilies,
+													 sub_member->em_datatype,
+												   sub_eclass->ec_opfamilies,
 														0);
 					outer_pk = make_canonical_pathkey(root,
 													  outer_ec,
-													  sub_pathkey->pk_opfamily,
-													  sub_pathkey->pk_strategy,
-													  sub_pathkey->pk_nulls_first);
+													sub_pathkey->pk_opfamily,
+													sub_pathkey->pk_strategy,
+												sub_pathkey->pk_nulls_first);
 					/* score = # of equivalence peers */
 					score = list_length(outer_ec->ec_members) - 1;
 					/* +1 if it matches the proper query_pathkeys item */
@@ -1000,14 +1000,14 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 				}
 			}
 		}
-		
+
 		/*
 		 * If we couldn't find a representation of this sub_pathkey, we're
 		 * done (we can't use the ones to its right, either).
 		 */
 		if (!best_pathkey)
 			break;
-		
+
 		/*
 		 * Eliminate redundant ordering info; could happen if outer query
 		 * equivalences subquery keys...
@@ -1018,7 +1018,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 			retvallen++;
 		}
 	}
-	
+
 	return retval;
 }
 
@@ -1047,7 +1047,7 @@ build_join_pathkeys(PlannerInfo *root,
 {
 	if (jointype == JOIN_FULL || jointype == JOIN_RIGHT)
 		return NIL;
-	
+
 	/*
 	 * This used to be quite a complex bit of code, but now that all pathkey
 	 * sublists start out life canonicalized, we don't have to do a darn thing
@@ -1098,20 +1098,20 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 	EquivalenceClass *eclass;
 	int			strategy;
 	ListCell   *lc;
-	
+
 	/* Get the expr's data type. */
 	typeoid = exprType(expr);
-	
+
 	/* Get Oid of the equality operator applied to two values of that type. */
 	eqopoid = compatible_oper_opid(eqopname, typeoid, typeoid, true);
-	
+
 	/*
 	 * Get Oid of the sort operator that would be used for a sort-merge
 	 * equijoin on a pair of exprs of the same type.
 	 */
 	if (eqopoid == InvalidOid || !op_mergejoinable(eqopoid))
 		elog(ERROR, "could not find mergejoinable = operator for type %u", typeoid);
-	
+
 	mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
 	foreach(lc, mergeopfamilies)
 	{
@@ -1125,7 +1125,7 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 		pk = makePathKey(eclass, opfamily, strategy, false);
 	else
 		pk = make_canonical_pathkey(root, eclass, opfamily, strategy, false);
-	
+
 	return pk;
 }
 
@@ -1174,14 +1174,14 @@ cdb_pull_up_pathkey(PlannerInfo *root,
 	Expr	   *sub_pathkeyexpr;
 	EquivalenceClass *outer_ec;
 	Expr	   *newexpr = NULL;
-	
+
 	Assert(pathkey);
 	Assert(!newvarlist ||
 		   list_length(newvarlist) == list_length(targetlist));
-	
+
 	/* Find an expr that we can rewrite to use the projected columns. */
 	sub_pathkeyexpr = cdbpullup_findPathKeyExprInTargetList(pathkey, targetlist);
-	
+
 	/* Replace expr's Var nodes with new ones referencing the targetlist. */
 	if (sub_pathkeyexpr)
 	{
@@ -1194,11 +1194,11 @@ cdb_pull_up_pathkey(PlannerInfo *root,
 	else if (CdbPathkeyEqualsConstant(pathkey))
 	{
 		ListCell   *lc;
-		
+
 		foreach(lc, pathkey->pk_eclass->ec_members)
 		{
 			EquivalenceMember *em = lfirst(lc);
-			
+
 			if (em->em_is_const)
 			{
 				newexpr = (Expr *) copyObject(em->em_expr);
@@ -1209,16 +1209,16 @@ cdb_pull_up_pathkey(PlannerInfo *root,
 	/* Fail if no usable expr. */
 	else
 		return NULL;
-	
+
 	if (!newexpr)
 		elog(ERROR, "could not pull up path key using projected target list");
-	
+
 	outer_ec = get_eclass_for_sort_expr(root,
 										newexpr,
 										exprType((Node *) newexpr),
 										pathkey->pk_eclass->ec_opfamilies,
 										0);
-	
+
 	/* Find or create the equivalence class for the transformed expr. */
 	return make_canonical_pathkey(root,
 								  outer_ec,
@@ -1256,13 +1256,13 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
 {
 	List	   *pathkeys = NIL;
 	ListCell   *l;
-	
+
 	foreach(l, sortclauses)
 	{
 		SortGroupClause *sortcl = (SortGroupClause *) lfirst(l);
 		Expr	   *sortkey;
 		PathKey    *pathkey;
-		
+
 		sortkey = (Expr *) get_sortgroupclause_expr(sortcl, tlist);
 		Assert(OidIsValid(sortcl->sortop));
 		pathkey = make_pathkey_from_sortinfo(root,
@@ -1271,7 +1271,7 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
 											 sortcl->nulls_first,
 											 sortcl->tleSortGroupRef,
 											 canonicalize);
-		
+
 		/* Canonical form eliminates redundant ordering keys */
 		if (canonicalize)
 		{
@@ -1303,26 +1303,26 @@ make_pathkeys_for_groupclause(PlannerInfo *root,
 {
 	List	   *pathkeys = NIL;
 	ListCell   *l;
-	
+
 	List	   *sub_pathkeys = NIL;
-	
+
 	foreach(l, groupclause)
 	{
 		Expr	   *sortkey;
 		PathKey    *pathkey;
-		
+
 		Node	   *node = lfirst(l);
-		
+
 		if (node == NULL)
 			continue;
-		
+
 		if (IsA(node, SortGroupClause))
 		{
 			SortGroupClause *gc = (SortGroupClause *) node;
-			
+
 			sortkey = (Expr *) get_sortgroupclause_expr(gc, tlist);
 			pathkey = make_pathkey_from_sortinfo(root, sortkey, gc->sortop, gc->nulls_first, false, 0);
-			
+
 			/*
 			 * Similar to SortGroupClauses, the pathkey becomes a one-element
 			 * sublist. canonicalize_pathkeys() might replace it with a longer
@@ -1333,20 +1333,20 @@ make_pathkeys_for_groupclause(PlannerInfo *root,
 		else if (IsA(node, List))
 		{
 			pathkeys = list_concat(pathkeys,
-								   make_pathkeys_for_groupclause(root, (List *) node,
-																 tlist));
+						   make_pathkeys_for_groupclause(root, (List *) node,
+														 tlist));
 		}
 		else if (IsA(node, GroupingClause))
 		{
 			sub_pathkeys =
-			list_concat(sub_pathkeys,
-						make_pathkeys_for_groupclause(root, ((GroupingClause *) node)->groupsets,
-													  tlist));
+				list_concat(sub_pathkeys,
+							make_pathkeys_for_groupclause(root, ((GroupingClause *) node)->groupsets,
+														  tlist));
 		}
 	}
-	
+
 	pathkeys = list_concat(pathkeys, sub_pathkeys);
-	
+
 	return pathkeys;
 }
 
@@ -1368,30 +1368,30 @@ void
 cache_mergeclause_eclasses(PlannerInfo *root, RestrictInfo *restrictinfo)
 {
 	Assert(restrictinfo->mergeopfamilies != NIL);
-	
+
 	/* the cached values should be either both set or both not */
 	if (restrictinfo->left_ec == NULL)
 	{
 		Expr	   *clause = restrictinfo->clause;
 		Oid			lefttype,
-		righttype;
-		
+					righttype;
+
 		/* Need the declared input types of the operator */
 		op_input_types(((OpExpr *) clause)->opno, &lefttype, &righttype);
-		
+
 		/* Find or create a matching EquivalenceClass for each side */
 		restrictinfo->left_ec =
-		get_eclass_for_sort_expr(root,
-								 (Expr *) get_leftop(clause),
-								 lefttype,
-								 restrictinfo->mergeopfamilies,
-								 0);
+			get_eclass_for_sort_expr(root,
+									 (Expr *) get_leftop(clause),
+									 lefttype,
+									 restrictinfo->mergeopfamilies,
+									 0);
 		restrictinfo->right_ec =
-		get_eclass_for_sort_expr(root,
-								 (Expr *) get_rightop(clause),
-								 righttype,
-								 restrictinfo->mergeopfamilies,
-								 0);
+			get_eclass_for_sort_expr(root,
+									 (Expr *) get_rightop(clause),
+									 righttype,
+									 restrictinfo->mergeopfamilies,
+									 0);
 	}
 	else
 		Assert(restrictinfo->right_ec != NULL);
@@ -1424,22 +1424,22 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 {
 	List	   *mergeclauses = NIL;
 	ListCell   *i;
-	
+
 	/* make sure we have eclasses cached in the clauses */
 	foreach(i, restrictinfos)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(i);
-		
+
 		cache_mergeclause_eclasses(root, rinfo);
 	}
-	
+
 	foreach(i, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(i);
 		EquivalenceClass *pathkey_ec = pathkey->pk_eclass;
 		List	   *matched_restrictinfos = NIL;
 		ListCell   *j;
-		
+
 		/*----------
 		 * A mergejoin clause matches a pathkey if it has the same EC.
 		 * If there are multiple matching clauses, take them all.  In plain
@@ -1480,17 +1480,17 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 		{
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(j);
 			EquivalenceClass *clause_ec;
-			
+
 			if (outer_keys)
 				clause_ec = rinfo->outer_is_left ?
-				rinfo->left_ec : rinfo->right_ec;
+					rinfo->left_ec : rinfo->right_ec;
 			else
 				clause_ec = rinfo->outer_is_left ?
-				rinfo->right_ec : rinfo->left_ec;
+					rinfo->right_ec : rinfo->left_ec;
 			if (clause_ec == pathkey_ec)
 				matched_restrictinfos = lappend(matched_restrictinfos, rinfo);
 		}
-		
+
 		/*
 		 * If we didn't find a mergeclause, we're done --- any additional
 		 * sort-key positions in the pathkeys are useless.	(But we can still
@@ -1498,14 +1498,14 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 		 */
 		if (matched_restrictinfos == NIL)
 			break;
-		
+
 		/*
 		 * If we did find usable mergeclause(s) for this sort-key position,
 		 * add them to result list.
 		 */
 		mergeclauses = list_concat(mergeclauses, matched_restrictinfos);
 	}
-	
+
 	return mergeclauses;
 }
 
@@ -1545,11 +1545,11 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 	int			necs;
 	ListCell   *lc;
 	int			j;
-	
+
 	/* Might have no mergeclauses */
 	if (nClauses == 0)
 		return NIL;
-	
+
 	/*
 	 * Make arrays of the ECs used by the mergeclauses (dropping any
 	 * duplicates) and their "popularity" scores.
@@ -1557,22 +1557,22 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 	ecs = (EquivalenceClass **) palloc(nClauses * sizeof(EquivalenceClass *));
 	scores = (int *) palloc(nClauses * sizeof(int));
 	necs = 0;
-	
+
 	foreach(lc, mergeclauses)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 		EquivalenceClass *oeclass;
 		int			score;
 		ListCell   *lc2;
-		
+
 		/* get the outer eclass */
 		cache_mergeclause_eclasses(root, rinfo);
-		
+
 		if (rinfo->outer_is_left)
 			oeclass = rinfo->left_ec;
 		else
 			oeclass = rinfo->right_ec;
-		
+
 		/* reject duplicates */
 		for (j = 0; j < necs; j++)
 		{
@@ -1581,24 +1581,24 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 		}
 		if (j < necs)
 			continue;
-		
+
 		/* compute score */
 		score = 0;
 		foreach(lc2, oeclass->ec_members)
 		{
 			EquivalenceMember *em = (EquivalenceMember *) lfirst(lc2);
-			
+
 			/* Potential future join partner? */
 			if (!em->em_is_const && !em->em_is_child &&
 				!bms_overlap(em->em_relids, joinrel->relids))
 				score++;
 		}
-		
+
 		ecs[necs] = oeclass;
 		scores[necs] = score;
 		necs++;
 	}
-	
+
 	/*
 	 * Find out if we have all the ECs mentioned in query_pathkeys; if so we
 	 * can generate a sort order that's also useful for final output. There is
@@ -1610,7 +1610,7 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 		{
 			PathKey    *query_pathkey = (PathKey *) lfirst(lc);
 			EquivalenceClass *query_ec = query_pathkey->pk_eclass;
-			
+
 			for (j = 0; j < necs; j++)
 			{
 				if (ecs[j] == query_ec)
@@ -1629,7 +1629,7 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 			{
 				PathKey    *query_pathkey = (PathKey *) lfirst(lc);
 				EquivalenceClass *query_ec = query_pathkey->pk_eclass;
-				
+
 				for (j = 0; j < necs; j++)
 				{
 					if (ecs[j] == query_ec)
@@ -1641,7 +1641,7 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 			}
 		}
 	}
-	
+
 	/*
 	 * Add remaining ECs to the list in popularity order, using a default sort
 	 * ordering.  (We could use qsort() here, but the list length is usually
@@ -1653,7 +1653,7 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 		int			best_score;
 		EquivalenceClass *ec;
 		PathKey    *pathkey;
-		
+
 		best_j = 0;
 		best_score = scores[0];
 		for (j = 1; j < necs; j++)
@@ -1677,10 +1677,10 @@ select_outer_pathkeys_for_merge(PlannerInfo *root,
 		Assert(!pathkey_is_redundant(pathkey, pathkeys));
 		pathkeys = lappend(pathkeys, pathkey);
 	}
-	
+
 	pfree(ecs);
 	pfree(scores);
-	
+
 	return pathkeys;
 }
 
@@ -1715,20 +1715,20 @@ make_inner_pathkeys_for_merge(PlannerInfo *root,
 	PathKey    *opathkey;
 	ListCell   *lc;
 	ListCell   *lop;
-	
+
 	lastoeclass = NULL;
 	opathkey = NULL;
 	lop = list_head(outer_pathkeys);
-	
+
 	foreach(lc, mergeclauses)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 		EquivalenceClass *oeclass;
 		EquivalenceClass *ieclass;
 		PathKey    *pathkey;
-		
+
 		cache_mergeclause_eclasses(root, rinfo);
-		
+
 		if (rinfo->outer_is_left)
 		{
 			oeclass = rinfo->left_ec;
@@ -1739,7 +1739,7 @@ make_inner_pathkeys_for_merge(PlannerInfo *root,
 			oeclass = rinfo->right_ec;
 			ieclass = rinfo->left_ec;
 		}
-		
+
 		/* outer eclass should match current or next pathkeys */
 		/* we check this carefully for debugging reasons */
 		if (oeclass != lastoeclass)
@@ -1752,7 +1752,7 @@ make_inner_pathkeys_for_merge(PlannerInfo *root,
 			if (oeclass != lastoeclass)
 				elog(ERROR, "outer pathkeys do not match mergeclause");
 		}
-		
+
 		/*
 		 * Often, we'll have same EC on both sides, in which case the outer
 		 * pathkey is also canonical for the inner side, and we can skip a
@@ -1766,7 +1766,7 @@ make_inner_pathkeys_for_merge(PlannerInfo *root,
 											 opathkey->pk_opfamily,
 											 opathkey->pk_strategy,
 											 opathkey->pk_nulls_first);
-		
+
 		/*
 		 * Don't generate redundant pathkeys (can happen if multiple
 		 * mergeclauses refer to same EC).
@@ -1774,7 +1774,7 @@ make_inner_pathkeys_for_merge(PlannerInfo *root,
 		if (!pathkey_is_redundant(pathkey, pathkeys))
 			pathkeys = lappend(pathkeys, pathkey);
 	}
-	
+
 	return pathkeys;
 }
 
@@ -1811,17 +1811,17 @@ pathkeys_useful_for_merging(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 {
 	int			useful = 0;
 	ListCell   *i;
-	
+
 	foreach(i, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(i);
 		bool		matched = false;
 		ListCell   *j;
-		
+
 		/* If "wrong" direction, not useful for merging */
 		if (!right_merge_direction(root, pathkey))
 			break;
-		
+
 		/*
 		 * First look into the EquivalenceClass of the pathkey, to see if
 		 * there are any members not yet joined to the rel.  If so, it's
@@ -1840,11 +1840,11 @@ pathkeys_useful_for_merging(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 			foreach(j, rel->joininfo)
 			{
 				RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(j);
-				
+
 				if (restrictinfo->mergeopfamilies == NIL)
 					continue;
 				cache_mergeclause_eclasses(root, restrictinfo);
-				
+
 				if (pathkey->pk_eclass == restrictinfo->left_ec ||
 					pathkey->pk_eclass == restrictinfo->right_ec)
 				{
@@ -1853,7 +1853,7 @@ pathkeys_useful_for_merging(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 				}
 			}
 		}
-		
+
 		/*
 		 * If we didn't find a mergeclause, we're done --- any additional
 		 * sort-key positions in the pathkeys are useless.	(But we can still
@@ -1864,7 +1864,7 @@ pathkeys_useful_for_merging(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 		else
 			break;
 	}
-	
+
 	return useful;
 }
 
@@ -1877,11 +1877,11 @@ static bool
 right_merge_direction(PlannerInfo *root, PathKey *pathkey)
 {
 	ListCell   *l;
-	
+
 	foreach(l, root->query_pathkeys)
 	{
 		PathKey    *query_pathkey = (PathKey *) lfirst(l);
-		
+
 		if (pathkey->pk_eclass == query_pathkey->pk_eclass &&
 			pathkey->pk_opfamily == query_pathkey->pk_opfamily)
 		{
@@ -1895,7 +1895,7 @@ right_merge_direction(PlannerInfo *root, PathKey *pathkey)
 			return (pathkey->pk_strategy == query_pathkey->pk_strategy);
 		}
 	}
-	
+
 	/* If no matching ORDER BY request, prefer the ASC direction */
 	return (pathkey->pk_strategy == BTLessStrategyNumber);
 }
@@ -1914,16 +1914,16 @@ pathkeys_useful_for_ordering(PlannerInfo *root, List *pathkeys)
 {
 	if (root->query_pathkeys == NIL)
 		return 0;				/* no special ordering requested */
-	
+
 	if (pathkeys == NIL)
 		return 0;				/* unordered path */
-	
+
 	if (pathkeys_contained_in(root->query_pathkeys, pathkeys))
 	{
 		/* It's useful ... or at least the first N keys are */
 		return list_length(root->query_pathkeys);
 	}
-	
+
 	return 0;					/* path ordering not useful */
 }
 
@@ -1938,12 +1938,12 @@ truncate_useless_pathkeys(PlannerInfo *root,
 {
 	int			nuseful;
 	int			nuseful2;
-	
+
 	nuseful = pathkeys_useful_for_merging(root, rel, pathkeys);
 	nuseful2 = pathkeys_useful_for_ordering(root, pathkeys);
 	if (nuseful2 > nuseful)
 		nuseful = nuseful2;
-	
+
 	/*
 	 * Note: not safe to modify input list destructively, but we can avoid
 	 * copying the list if we're not actually going to change it
@@ -1980,4 +1980,3 @@ has_useful_pathkeys(PlannerInfo *root, RelOptInfo *rel)
 		return true;			/* might be able to use them for ordering */
 	return false;				/* definitely useless */
 }
-
