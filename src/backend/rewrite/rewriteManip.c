@@ -55,7 +55,14 @@ static Relids adjust_relid_set(Relids relids, int oldrelid, int newrelid);
 /*
  * checkExprHasAggs -
  *	Check if an expression contains an aggregate function call.
- *
+*/
+bool
+checkExprHasAggs(Node *node)
+{
+	return contain_aggs_of_level(node, 0);
+}
+
+/*
  * The objective of this routine is to detect whether there are aggregates
  * belonging to the given query level.  Aggregates belonging to subqueries
  * or outer queries do NOT cause a true result.  We must recurse into
