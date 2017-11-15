@@ -459,10 +459,28 @@ grouping_is_sortable(List *groupClause)
 
 	foreach(glitem, groupClause)
 	{
-		SortGroupClause *groupcl = (SortGroupClause *) lfirst(glitem);
+		Node	   *node = lfirst(glitem);
 
-		if (!OidIsValid(groupcl->sortop))
-			return false;
+		if (node == NULL)
+			continue;
+
+		if (IsA(node, List))
+		{
+			if (!grouping_is_sortable((List *) node))
+				return false;
+		}
+		else if (IsA(node, GroupingClause))
+		{
+			if (!grouping_is_sortable(((GroupingClause *) node)->groupsets))
+				return false;
+		}
+		else
+		{
+			SortGroupClause *groupcl = (SortGroupClause *) lfirst(glitem);
+
+			if (!OidIsValid(groupcl->sortop))
+				return false;
+		}
 	}
 	return true;
 }
