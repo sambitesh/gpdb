@@ -661,7 +661,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 			break;
 
 		case EXPR_KIND_SCATTER_BY:
-			errkind = true;
+			/* okay */
 			break;
 
 			/*
