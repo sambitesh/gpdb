@@ -2332,7 +2332,11 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 		pwindow->ordNumCols = ulNumCols;
 		pwindow->ordColIdx = (AttrNumber *) gpdb::GPDBAlloc(ulNumCols * sizeof(AttrNumber));
 		pwindow->ordOperators = (Oid *) gpdb::GPDBAlloc(ulNumCols * sizeof(Oid));
-		TranslateOrdCols(pdxlnSortColList, &dxltrctxChild, pwindow->ordColIdx, pwindow->ordOperators, &pwindow->firstOrderCol, &pwindow->firstOrderCmpOperator, &pplan->targetlist);
+		
+		TranslateOrdCols(pdxlnSortColList, &dxltrctxChild, pwindow->ordColIdx, pwindow->ordOperators, &pwindow->firstOrderCmpOperator, &pplan->targetlist, &pplanChild->targetlist);
+
+		//our stuff
+		pwindow->firstOrderCol = (*pdxlnChild)[EdxlwindowIndexProjList]->UlArity();
 
 		// translate the window frame specified in the window key
 		if (NULL != pdxlwindowkey->Pdxlwf())
@@ -2414,6 +2418,18 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 			{
 				pwindow->startOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnTrail)[0], &mapcidvarplstmt);
 			}
+
+//			if(IsA(pplanChild->type,Sort))
+//			{
+//				Plan *pplanSortChild = pplanChild->lefttree;
+//				TargetEntry *newTe = gpdb::targ
+//				gpdb::PlAppendElement(pplanSortChild->targetlist, (void *) newTe);
+//				if(IsA(pplanSortChild, Motion))
+//				{
+//					Plan *pplanMotionChild = pplanSortChild->lefttree;
+//					gpdb::PlAppendElement(pplanMotionChild->targetlist, (void *) newTe);
+//				}
+//			}
 
 			// cleanup
 			pdrgpdxltrctx->Release();
@@ -4775,9 +4791,10 @@ CTranslatorDXLToPlStmt::TranslateOrdCols
 	const CDXLTranslateContext *pdxltrctxChild,
 	AttrNumber *pattnoSortColIds,
 	Oid *poidSortOpIds,
-    AttrNumber *firstOrdCol,
-    Oid *firstSortOp,
-    List **plTargetList,
+//    AttrNumber *firstOrdCol,
+	Oid *firstSortOp,
+	List **plTargetList,
+	List **plChildTargetList,
 	bool *pboolNullsFirst
 	)
 {
@@ -4788,7 +4805,7 @@ CTranslatorDXLToPlStmt::TranslateOrdCols
 		CDXLScalarSortCol *pdxlopSortCol = CDXLScalarSortCol::PdxlopConvert(pdxlnSortCol->Pdxlop());
 
 		ULONG ulSortColId = pdxlopSortCol->UlColId();
-	 	const TargetEntry *pteSortCol = pdxltrctxChild->Pte(ulSortColId);
+		TargetEntry *pteSortCol = pdxltrctxChild->Pte(ulSortColId);
 		if (NULL  == pteSortCol)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtAttributeNotFound, ulSortColId);
@@ -4800,12 +4817,14 @@ CTranslatorDXLToPlStmt::TranslateOrdCols
 		poidSortOpIds[ul] = gpdb::OidEqualityOp(typeId);
 		// Add to &pplan->targetlist
 		//pteSortCol->ressortgroupref = 1;
-		*plTargetList = gpdb::PlAppendElement(*plTargetList, (void *) pteSortCol);
+		//*plTargetList = gpdb::PlAppendElement(*plTargetList, (void *) pteSortCol);
 		
 		if(ul == 0)
 		{
-			*firstOrdCol = pteSortCol->resno;
 			*firstSortOp = CMDIdGPDB::PmdidConvert(pdxlopSortCol->PmdidSortOp())->OidObjectId();
+			TargetEntry *te = (TargetEntry *)gpdb::PvCopyObject(pteSortCol);
+			te->ressortgroupref = 1;
+			*plChildTargetList = gpdb::PlAppendElement(*plChildTargetList, (void *) te);
 		}
 		if (pboolNullsFirst)
 		{

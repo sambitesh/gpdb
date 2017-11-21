@@ -610,9 +610,10 @@ namespace gpdxl
 				const CDXLTranslateContext *pdxltrctxChild,
 				AttrNumber *pattnoSortColIds,
 				Oid *poidSortOpIds,
-				AttrNumber *firstOrdCol,
+//				AttrNumber *firstOrdCol,
 				Oid *firstOrdSortOp,
 			 	List **plTargetlist,
+				List **plChildTargetlist,
 				bool *pboolNullsFirst = NULL
 				);
 

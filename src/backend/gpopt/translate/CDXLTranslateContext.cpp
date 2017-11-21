@@ -126,7 +126,7 @@ CDXLTranslateContext::CopyParamHashmap
 //		Lookup target entry associated with a given col id
 //
 //---------------------------------------------------------------------------
-const TargetEntry *
+TargetEntry *
 CDXLTranslateContext::Pte
 	(
 	ULONG ulColId

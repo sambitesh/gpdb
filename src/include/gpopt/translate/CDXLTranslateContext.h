@@ -96,7 +96,7 @@ namespace gpdxl
 			}
 
 			// return the target entry corresponding to the given ColId
-			const TargetEntry *Pte(ULONG ulColId) const;
+			TargetEntry *Pte(ULONG ulColId) const;
 
 			// return the param id corresponding to the given ColId
 			const CMappingElementColIdParamId *Pmecolidparamid(ULONG ulColId) const;
