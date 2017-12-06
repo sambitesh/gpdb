@@ -441,9 +441,6 @@ CTranslatorDXLToScalar::PaggrefFromDXLNodeScAggref
 
 	Aggref *paggref = MakeNode(Aggref);
 	paggref->aggfnoid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidAgg())->OidObjectId();
-	// FIXME: How to translate the new kind of aggdistinct? It used to be a bool,
-	// but now it's a List of SortClauses.
-	//paggref->aggdistinct = pdxlop->FDistinct();
 	paggref->aggdistinct = NIL;
 	paggref->agglevelsup = 0;
 	paggref->aggkind = 'n';
@@ -497,9 +494,24 @@ CTranslatorDXLToScalar::PaggrefFromDXLNodeScAggref
 	int attno;
 	paggref->args = NIL;
 	ListCell *plc;
+	int sortgrpindex = 1;
 	ForEachWithCount (plc, argExprs, attno)
 	{
 		TargetEntry *pteNew = gpdb::PteMakeTargetEntry((Expr *) lfirst(plc), attno + 1, NULL, false);
+		/*
+		 * Translate the aggdistinct bool set to true (in ORCA),
+		 * to a List of SortGroupClause in the PLNSTMT
+		 */
+		if(pdxlop->FDistinct())
+		{
+			pteNew->ressortgroupref = sortgrpindex;
+			SortGroupClause *gc = makeNode(SortGroupClause);
+			gc->tleSortGroupRef = sortgrpindex;
+			gc->eqop = gpdb::OidEqualityOp(gpdb::OidExprType((Node*) pteNew->expr));
+			gc->sortop = gpdb::OidOrderingOpForEqualityOp(gc->eqop, NULL);
+			paggref->aggdistinct = gpdb::PlAppendElement(paggref->aggdistinct, gc);
+			sortgrpindex++;
+		}
 		paggref->args = gpdb::PlAppendElement(paggref->args, pteNew);
 	}
 
