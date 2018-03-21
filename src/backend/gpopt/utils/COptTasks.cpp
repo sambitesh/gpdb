@@ -748,8 +748,12 @@ COptTasks::PoconfCreate
 	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
 	ULONG ulJoinOrderThreshold = (ULONG) optimizer_join_order_threshold;
 	ULONG ulBroadcastThreshold = (ULONG) optimizer_penalize_broadcast_threshold;
+	DrgPcp *pdrgPcp = GPOS_NEW(pmp) DrgPcp(pmp);
+	ICostModelParams::SCostParam *pcmp = GPOS_NEW(pmp) ICostModelParams::SCostParam(CCostModelParamsGPDB::EcpNLJFactor, optimizer_nestloop_factor, optimizer_nestloop_factor - 0.5, optimizer_nestloop_factor + 0.5);
+	pdrgPcp->Append(pcmp);
+	pcm->SetParams(pdrgPcp);
 
-	return GPOS_NEW(pmp) COptimizerConfig
+	COptimizerConfig *poconf = GPOS_NEW(pmp) COptimizerConfig
 						(
 						GPOS_NEW(pmp) CEnumeratorConfig(pmp, ullPlanId, ullSamples, dCostThreshold),
 						GPOS_NEW(pmp) CStatisticsConfig(pmp, dDampingFactorFilter, dDampingFactorJoin, dDampingFactorGroupBy),
@@ -767,6 +771,8 @@ COptTasks::PoconfCreate
 								),
 						GPOS_NEW(pmp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK))
 						);
+	pdrgPcp->Release();
+	return poconf;
 }
 
 
@@ -861,22 +867,6 @@ COptTasks::SetCostModelParams
 	)
 {
 	GPOS_ASSERT(NULL != pcm);
-
-	if (optimizer_nestloop_factor > 1.0)
-	{
-		// change NLJ cost factor
-		ICostModelParams::SCostParam *pcp = NULL;
-		if (OPTIMIZER_GPDB_CALIBRATED == optimizer_cost_model)
-		{
-			pcp = pcm->Pcp()->PcpLookup(CCostModelParamsGPDB::EcpNLJFactor);
-		}
-		else
-		{
-			pcp = pcm->Pcp()->PcpLookup(CCostModelParamsGPDBLegacy::EcpNLJFactor);
-		}
-		CDouble dNLJFactor(optimizer_nestloop_factor);
-		pcm->Pcp()->SetParam(pcp->UlId(), dNLJFactor, dNLJFactor - 0.5, dNLJFactor + 0.5);
-	}
 
 	if (optimizer_sort_factor > 1.0 || optimizer_sort_factor < 1.0)
 	{
@@ -1234,6 +1224,7 @@ COptTasks::PvOptimizeMinidumpTask
 	{
 		ulSegmentsForCosting = ulSegments;
 	}
+	
 
 	ICostModel *pcm = Pcm(pmp, ulSegmentsForCosting);
 	COptimizerConfig *pocconf = PoconfCreate(pmp, pcm);
