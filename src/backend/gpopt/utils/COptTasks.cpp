@@ -745,7 +745,7 @@ COptTasks::PoconfCreate
 
 	ULONG ulCTEInliningCutoff = (ULONG) optimizer_cte_inlining_bound;
 	ULONG ulJoinArityForAssociativityCommutativity = (ULONG) optimizer_join_arity_for_associativity_commutativity;
-	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
+	ULONG ulConstraintDerivationThreshold = (ULONG) optimizer_constraint_derivation_threshold;
 	ULONG ulJoinOrderThreshold = (ULONG) optimizer_join_order_threshold;
 	ULONG ulBroadcastThreshold = (ULONG) optimizer_penalize_broadcast_threshold;
 
@@ -759,7 +759,7 @@ COptTasks::PoconfCreate
 								(
 								INT_MAX /* optimizer_parts_to_force_sort_on_insert */,
 								ulJoinArityForAssociativityCommutativity,
-								ulArrayExpansionThreshold,
+								ulConstraintDerivationThreshold,
 								ulJoinOrderThreshold,
 								ulBroadcastThreshold,
 								false /* don't create Assert nodes for constraints, we'll

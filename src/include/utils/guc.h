@@ -470,7 +470,7 @@ extern double optimizer_nestloop_factor;
 extern double optimizer_sort_factor;
 
 /* Optimizer hints */
-extern int optimizer_array_expansion_threshold;
+extern int optimizer_constraint_derivation_threshold;
 extern int optimizer_join_order_threshold;
 extern int optimizer_join_order;
 extern int optimizer_join_arity_for_associativity_commutativity;

@@ -428,7 +428,7 @@ double		optimizer_sort_factor;
 
 /* Optimizer hints */
 int			optimizer_join_arity_for_associativity_commutativity;
-int         optimizer_array_expansion_threshold;
+int         optimizer_constraint_derivation_threshold;
 int         optimizer_join_order_threshold;
 int			optimizer_join_order;
 int			optimizer_cte_inlining_bound;
@@ -3916,12 +3916,12 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Item limit for expansion of arrays in WHERE clause to disjunctive form."),
+		{"optimizer_constraint_derivation_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Item limit of arrays in WHERE clause for constraint derivation."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_array_expansion_threshold,
+		&optimizer_constraint_derivation_threshold,
 		25, 0, INT_MAX, NULL, NULL
 	},
 
