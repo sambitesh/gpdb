@@ -6562,6 +6562,8 @@ select rank() over(partition by a, case when b = 0 then a+b end order by b asc) 
 
 -- alias
 select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FULL OUTER JOIN (FOJ) disabled with PQO. Set optimizer_enable_full_join to on to enable FOJ with PQO
  d  
 ----
   1
@@ -6607,6 +6609,8 @@ select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FULL OUTER JOIN (FOJ) disabled with PQO. Set optimizer_enable_full_join to on to enable FOJ with PQO
  v 
 ---
  1
@@ -6652,6 +6656,8 @@ select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select * from orca.r where a in (select count(*)+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: FULL OUTER JOIN (FOJ) disabled with PQO. Set optimizer_enable_full_join to on to enable FOJ with PQO
  a | b 
 ---+---
  2 | 2
@@ -6659,7 +6665,7 @@ select * from orca.r where a in (select count(*)+1 as v from orca.foo full join 
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Query-to-DXL Translation: No variable entry found due to incorrect normalization of query
+DETAIL:  Feature not supported: FULL OUTER JOIN (FOJ) disabled with PQO. Set optimizer_enable_full_join to on to enable FOJ with PQO
  a  | b 
 ----+---
   3 | 0
