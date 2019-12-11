@@ -524,7 +524,7 @@ CConfigParamMapping::PackConfigParamInBitset
 			join_heuristic_bitset = CXform::PbsJoinOrderOnGreedyXforms(mp);
 			break;
 		case JOIN_ORDER_EXHAUSTIVE_SEARCH:
-			join_heuristic_bitset = CXform::PbsJoinOrderOnExhaustiveXforms(mp);
+			join_heuristic_bitset = CXform::PbsJoinOrderOnExhaustive2Xforms(mp);
 			break;
 		default:
 			elog(ERROR, "Invalid value for optimizer_join_order, must \
