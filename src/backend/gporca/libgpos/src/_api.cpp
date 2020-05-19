@@ -269,17 +269,6 @@ int gpos_exec
 	}
 	catch(CException ex)
 	{
-		if (!IsLoggableFailure(ex))
-		{
-			std::cerr
-				<< "Unexpected exception reached top of execution stack:"
-				<< " major=" << ex.Major()
-				<< " minor=" << ex.Minor()
-				<< " file=" << ex.Filename()
-				<< " line=" << ex.Line()
-				<< std::endl;
-			// unexpected failure
-		}
 		throw ex;
 	}
 	catch (...)
