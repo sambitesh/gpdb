@@ -28,6 +28,7 @@ typedef struct CdbPgResults
 {
 	struct pg_result **pg_results;
 	int numResults;
+    MemoryContextCallback pgr_mcb;
 }CdbPgResults;
 
 /*
@@ -303,5 +304,8 @@ cdbdisp_makeDispatchResults(struct CdbDispatcherState *ds,
 
 void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
+
+void
+cdbdisp_clearCdbPgResults_callback(void *arg);
 
 #endif   /* CDBDISPATCHRESULT_H */

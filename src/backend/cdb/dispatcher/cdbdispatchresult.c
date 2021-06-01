@@ -787,6 +787,20 @@ cdbdisp_returnResults(CdbDispatchResults *primaryResults, CdbPgResults *cdb_pgre
 	}
 
 	Assert(nresults == nslots);
+    
+    MemoryContext oldcontext = MemoryContextSwitchTo(DispatcherContext);
+    
+    CdbPgResults *resultsToBeReset = palloc(sizeof(CdbPgResults));
+    resultsToBeReset->numResults = nresults;
+    resultsToBeReset->pg_results = cdb_pgresults->pg_results;
+    resultsToBeReset->pgr_mcb.func = cdbdisp_clearCdbPgResults_callback;
+    resultsToBeReset->pgr_mcb.arg = (void *)resultsToBeReset;
+    MemoryContextRegisterResetCallback(DispatcherContext,
+                                       &resultsToBeReset->pgr_mcb);
+    
+    MemoryContextSwitchTo(oldcontext);
+    
+    
 
 	/* tell the caller how many sets we're returning. */
 	cdb_pgresults->numResults = nresults;
@@ -872,6 +886,28 @@ cdbdisp_clearCdbPgResults(CdbPgResults *cdb_pgresults)
 	}
 
 	cdb_pgresults->numResults = 0;
+}
+
+void
+cdbdisp_clearCdbPgResults_callback(void *arg)
+{
+    CdbPgResults *cdb_pgresults = (CdbPgResults *) arg;
+    
+    int            i = 0;
+
+    if (!cdb_pgresults)
+        return;
+
+    for (i = 0; i < cdb_pgresults->numResults; i++)
+        PQclear(cdb_pgresults->pg_results[i]);
+
+    if (cdb_pgresults->pg_results)
+    {
+        pfree(cdb_pgresults->pg_results);
+        cdb_pgresults->pg_results = NULL;
+    }
+
+    cdb_pgresults->numResults = 0;
 }
 
 /*
