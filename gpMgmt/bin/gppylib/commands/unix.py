@@ -606,35 +606,27 @@ class InterfaceAddrs(Command):
 class PgPortIsActive(Command):
     def __init__(self, name, port, file, ctxt=LOCAL, remoteHost=None):
         self.port = port
-        cmdStr = "%s -an 2>/dev/null | %s %s | %s '{print $NF}'" % \
-                 (findCmdInPath('netstat'), findCmdInPath('grep'), file, findCmdInPath('awk'))
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
-    def contains_port(self):
-        rows = self.results.stdout.strip().split()
-
-        if len(rows) == 0:
-            return False
-
-        for r in rows:
-            val = r.split('.')
-            netstatport = int(val[len(val) - 1])
-            if netstatport == self.port:
-                return True
-
-        return False
+    def contains_port(self, remoteHost="127.0.0.1"):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = True
+        try:
+            sock.bind((remoteHost, self.port))
+            result = False
+        except:
+            pass
+        sock.close()
+        return result
 
     @staticmethod
     def local(name, file, port):
         cmd = PgPortIsActive(name, port, file)
-        cmd.run(validateAfter=True)
         return cmd.contains_port()
 
     @staticmethod
     def remote(name, file, port, remoteHost):
         cmd = PgPortIsActive(name, port, file, ctxt=REMOTE, remoteHost=remoteHost)
-        cmd.run(validateAfter=True)
-        return cmd.contains_port()
+        return cmd.contains_port(remoteHost)
 
 
 # --------------chmod ----------------------
